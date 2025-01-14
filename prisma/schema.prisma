@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(uuid())
+  username      String          @unique
+  password      String
+  displayName   String
+  role          Role
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  WorkgroupUser WorkgroupUser[]
+  Workgroup     Workgroup[]
+}
+
+model Workgroup {
+  id                  String              @id @default(uuid())
+  name                String
+  session             Int
+  projectStoryPerUser Int
+  managerId           String
+  Manager             User                @relation(fields: [managerId], references: [id])
+  DistributionGroup   GroupDistribution[]
+  WorkgroupUser       WorkgroupUser[]
+
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  TaskHistory         TaskHistory[]
+  Project             Project[]
+  ContentDistribution ContentDistribution[]
+}
+
+model WorkgroupUser {
+  id                Int                 @id @default(autoincrement())
+  userId            String
+  User              User                @relation(fields: [userId], references: [id])
+  workgroupId       String
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask WorkgroupUserTask[]
+  Project           Project[]
+
+  @@unique([workgroupId, userId])
+}
+
+model GroupDistribution {
+  code                String                @id
+  amontOfTroops       Int
+  workgroupId         String
+  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask   WorkgroupUserTask[]
+  ContentDistribution ContentDistribution[]
+}
+
+model TaskHistory {
+  id                Int                 @id @default(autoincrement())
+  createdAt         DateTime            @default(now())
+  workgroupId       String
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask WorkgroupUserTask[]
+}
+
+model WorkgroupUserTask {
+  workgroupUserId     Int               @id @default(autoincrement())
+  WorkgroupUser       WorkgroupUser     @relation(fields: [workgroupUserId], references: [id])
+  groupDistributionId String
+  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [code])
+  taskHistoryId       Int
+  TaskHistory         TaskHistory       @relation(fields: [taskHistoryId], references: [id])
+
+  @@unique([workgroupUserId, groupDistributionId, taskHistoryId])
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  name            String
+  status          Boolean       @default(false)
+  workgroupId     String
+  Workgroup       Workgroup     @relation(fields: [workgroupId], references: [id])
+  workgroupUserId Int
+  WorkgroupUser   WorkgroupUser @relation(fields: [workgroupUserId], references: [id])
+  Story           Story[]
+}
+
+model Story {
+  id                  String                @id @default(uuid())
+  section             Int?
+  // generate by algorithm
+  contentPerStory     Int?
+  type                String
+  projectId           String
+  Project             Project               @relation(fields: [projectId], references: [id])
+  data                Json
+  ContentDistribution ContentDistribution[]
+}
+
+model ContentDistribution {
+  session               Int
+  path                  String
+  workgroupId           String
+  Workgroup             Workgroup         @relation(fields: [workgroupId], references: [id])
+  groupDistributionCode String
+  GroupDistribution     GroupDistribution @relation(fields: [groupDistributionCode], references: [code])
+  storyId               String
+  Story                 Story             @relation(fields: [storyId], references: [id])
+
+  @@unique([workgroupId, groupDistributionCode, storyId, session])
+}
+
+enum Role {
+  MANAGER
+  CREATOR
+  DISTRIBUTOR
+}
