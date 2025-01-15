@@ -1,9 +1,10 @@
 import { prisma } from "@/db";
 import { HTTPException } from "hono/http-exception";
-import { LoginSchema } from "./schema";
 import { sign } from "hono/jwt";
-
-const signIn = async (data: LoginSchema) => {
+import type { SignInSchema } from "./auth.schema";
+import { config } from "@/config";
+import { addDays } from "date-fns";
+const signIn = async (data: SignInSchema) => {
   const user = await prisma.user.findUnique({
     where: { username: data.username },
   });
@@ -17,10 +18,10 @@ const signIn = async (data: LoginSchema) => {
       sub: user.id,
       role: user.role,
       name: user.displayName,
-      iat: Date.now(),
-      exp: Date.now() + 1000 * 60 * 60 * 24 * 3,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(addDays(new Date(), 3).getTime() / 1000),
     },
-    process.env.JWT_SECRET ?? ""
+    config.JWT_SECRET ?? ""
   );
   return {
     token,
