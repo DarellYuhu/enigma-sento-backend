@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import {
   auth,
   groupDistribution,
+  project,
   user,
   workgroup,
   workgroupUser,
@@ -18,6 +19,7 @@ app.route("", user);
 app.route("", workgroup);
 app.route("", workgroupUser);
 app.route("", groupDistribution);
+app.route("", project);
 
 app.doc("/docs", {
   openapi: "3.0.0",
