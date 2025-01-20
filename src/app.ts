@@ -3,12 +3,15 @@ import { apiReference } from "@scalar/hono-api-reference";
 import { logger } from "hono/logger";
 import {
   auth,
+  contentDistribution,
   groupDistribution,
   project,
+  story,
   user,
   workgroup,
   workgroupUser,
 } from "./services";
+import { swaggerUI } from "@hono/swagger-ui";
 
 const app = new OpenAPIHono();
 
@@ -20,6 +23,8 @@ app.route("", workgroup);
 app.route("", workgroupUser);
 app.route("", groupDistribution);
 app.route("", project);
+app.route("", story);
+app.route("", contentDistribution);
 
 app.doc("/docs", {
   openapi: "3.0.0",
@@ -37,5 +42,6 @@ app.get(
   "/api",
   apiReference({ spec: { url: "/docs" }, theme: "saturn", layout: "classic" })
 );
+app.get("/api-swagger", swaggerUI({ url: "/docs" }));
 
 export default app;

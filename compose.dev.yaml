@@ -8,5 +8,17 @@ services:
     volumes:
       - db-dev-data:/var/lib/postgresql/data
 
+  minio-dev:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - .env.development
+    volumes:
+      - minio-dev-data:/data
+    command: server --console-address ":9001" /data
+
 volumes:
   db-dev-data:
+  minio-dev-data:

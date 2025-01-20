@@ -8,7 +8,8 @@
     "lint": "bunx eslint",
     "db:seed": "bunx prisma db seed",
     "db:migrate": "bunx prisma migrate dev",
-    "db:up:dev": "docker compose -f compose.dev.yaml up -d"
+    "db:up:dev": "docker compose -f compose.dev.yaml up -d",
+    "db:down:dev": "docker compose -f compose.dev.yaml down"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.0",
@@ -18,13 +19,17 @@
     "@scalar/hono-api-reference": "^0.5.165",
     "date-fns": "^4.1.0",
     "hono": "^4.6.16",
+    "lodash": "^4.17.21",
+    "minio": "^8.0.3",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.24.1",
     "zod-openapi": "^4.2.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@faker-js/faker": "^9.4.0",
     "@types/bun": "latest",
+    "@types/lodash": "^4.17.14",
     "eslint": "^9.18.0",
     "globals": "^15.14.0",
     "prisma": "^6.2.1",

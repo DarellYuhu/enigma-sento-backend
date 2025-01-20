@@ -4,5 +4,15 @@ import workgroup from "./workgroup/workgroup.controller";
 import workgroupUser from "./workgroup-user/workgroup-user.controller";
 import groupDistribution from "./group-distribution/group-distribution.controller";
 import project from "./project/project.controller";
-
-export { auth, user, workgroup, workgroupUser, groupDistribution, project };
+import story from "./story/story.controller";
+import contentDistribution from "./content-distribution/content-distribution.controller";
+export {
+  auth,
+  user,
+  story,
+  project,
+  workgroup,
+  workgroupUser,
+  groupDistribution,
+  contentDistribution,
+};

@@ -6,6 +6,7 @@ import {
 import * as xlsx from "xlsx";
 import { HTTPException } from "hono/http-exception";
 import type { GroupDistribution, WorkgroupUser } from "@prisma/client";
+import { shuffle } from "lodash";
 
 const addGroupDistributions = async (
   data: CreateGroupDistributionBody,
@@ -51,12 +52,13 @@ const distributeGroupDistribution = (
   tasks: GroupDistribution[]
 ) => {
   const result: { workgroupUserId: number; groupDistributionId: string }[] = [];
+  const randomizedUsers = shuffle(users);
   let userIndex = 0;
 
   for (const task of tasks) {
-    const user = users[userIndex];
+    const user = randomizedUsers[userIndex];
     result.push({ workgroupUserId: user.id, groupDistributionId: task.code });
-    userIndex = (userIndex + 1) % users.length;
+    userIndex = (userIndex + 1) % randomizedUsers.length;
   }
 
   return result;

@@ -101,6 +101,8 @@ model Story {
   projectId           String
   Project             Project               @relation(fields: [projectId], references: [id])
   data                Json
+  captions            String[]
+  hashtags            String?
   ContentDistribution ContentDistribution[]
 }
 
