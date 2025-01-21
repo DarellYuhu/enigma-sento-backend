@@ -25,7 +25,10 @@ const addGroupDistributions = async (
 const generateTaskDistribution = async (workgroupId: string) => {
   const workgroup = await prisma.workgroup.findUnique({
     where: { id: workgroupId },
-    include: { DistributionGroup: true, WorkgroupUser: true },
+    include: {
+      DistributionGroup: true,
+      WorkgroupUser: { where: { User: { role: "CREATOR" } } },
+    },
   });
   if (!workgroup) {
     throw new HTTPException(404, { message: "Workgroup not found" });

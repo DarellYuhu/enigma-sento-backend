@@ -6,7 +6,7 @@ const createProject = async (data: CreateProjectBody) => {
   const { name, userId, workgroupId } = data;
   const project = await prisma.$transaction(async (db) => {
     const workgroupUser = await db.workgroupUser.findFirst({
-      where: { workgroupId, userId },
+      where: { workgroupId, userId, User: { role: "CREATOR" } },
     });
 
     if (!workgroupUser) {

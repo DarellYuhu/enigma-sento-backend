@@ -1,5 +1,6 @@
 import { minio, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
+import { HTTPException } from "hono/http-exception";
 
 type Data = Omit<CreateStoryBody, "data"> & { data: DataConfigType1 };
 
@@ -25,4 +26,22 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
   });
 };
 
-export { createStory };
+type UpdateStoryBody = {
+  captions: string[];
+  hashtags: string;
+};
+const updateStory = async (data: Partial<UpdateStoryBody>, id: string) => {
+  const story = await prisma.story.findUnique({
+    where: { id },
+    select: { contentPerStory: true },
+  });
+  if (!story) throw new HTTPException(404, { message: "Story not found" });
+  if (
+    data.captions &&
+    data.captions.length < (story.contentPerStory ?? Infinity)
+  )
+    throw new HTTPException(400, { message: "Not enough captions" });
+  return prisma.story.update({ where: { id }, data });
+};
+
+export { createStory, updateStory };

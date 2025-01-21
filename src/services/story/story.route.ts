@@ -1,5 +1,9 @@
-import { createRoute } from "@hono/zod-openapi";
-import { createStoryBody, createStoryResponse } from "./story.schema";
+import { createRoute, z } from "@hono/zod-openapi";
+import {
+  createStoryBody,
+  createStoryResponse,
+  updateStoryBody,
+} from "./story.schema";
 
 const createStoryRoute = createRoute({
   tags: ["Story"],
@@ -26,4 +30,31 @@ const createStoryRoute = createRoute({
   },
 });
 
-export { createStoryRoute };
+const updateStoryRoute = createRoute({
+  tags: ["Story"],
+  method: "patch",
+  path: "/story/{id}",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: updateStoryBody,
+        },
+      },
+    },
+  },
+
+  responses: {
+    200: {
+      description: "UPDATED",
+      content: {
+        "application/json": {
+          schema: createStoryResponse,
+        },
+      },
+    },
+  },
+});
+
+export { createStoryRoute, updateStoryRoute };

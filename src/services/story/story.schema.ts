@@ -82,6 +82,15 @@ const createStoryResponse = z.object({
   }),
 });
 
+const updateStoryBody = z.object({
+  captions: z.array(z.string()).optional(),
+  hashtags: z.string().optional(),
+});
 export type CreateStoryBody = z.infer<typeof createStoryBody>;
 export type DataConfigType1 = z.infer<typeof dataConfigType1>;
-export { createStoryBody, createStoryResponse, dataConfigType1 };
+export {
+  createStoryBody,
+  createStoryResponse,
+  dataConfigType1,
+  updateStoryBody,
+};
