@@ -3,6 +3,7 @@ import {
   createGroupDistributionBody,
   createGroupDistributionResponse,
   generateGroupDistributionTaskResponse,
+  getGroupDistributionsResponse,
 } from "./group-distribution.schema";
 
 const createGroupDistributionRoute = createRoute({
@@ -52,4 +53,23 @@ const generateTaskDistributionRoute = createRoute({
   },
 });
 
-export { createGroupDistributionRoute, generateTaskDistributionRoute };
+const getGroupDistributionsRoute = createRoute({
+  method: "get",
+  path: "/workgroups/{id}/group-distributions",
+  responses: {
+    200: {
+      description: "OK",
+      content: {
+        "application/json": {
+          schema: getGroupDistributionsResponse,
+        },
+      },
+    },
+  },
+});
+
+export {
+  createGroupDistributionRoute,
+  generateTaskDistributionRoute,
+  getGroupDistributionsRoute,
+};

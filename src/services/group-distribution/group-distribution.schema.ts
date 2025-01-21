@@ -36,6 +36,17 @@ const generateGroupDistributionTaskResponse = z.object({
   }),
 });
 
+const getGroupDistributionsResponse = z.object({
+  message: z.string(),
+  data: z.array(
+    z.object({
+      code: z.string(),
+      amontOfTroops: z.number(),
+      workgroupId: z.string(),
+    })
+  ),
+});
+
 export type CreateGroupDistributionBody = z.infer<
   typeof createGroupDistributionBody
 >;
@@ -44,5 +55,6 @@ export {
   createGroupDistributionBody,
   createGroupDistributionResponse,
   generateGroupDistributionTaskResponse,
+  getGroupDistributionsResponse,
   sheetSchema,
 };

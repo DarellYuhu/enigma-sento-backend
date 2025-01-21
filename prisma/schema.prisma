@@ -54,12 +54,15 @@ model WorkgroupUser {
 }
 
 model GroupDistribution {
-  code                String                @id
+  id                  String                @id @default(uuid())
+  code                String
   amontOfTroops       Int
   workgroupId         String
   Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
   WorkgroupUserTask   WorkgroupUserTask[]
   ContentDistribution ContentDistribution[]
+
+  @@unique([code, workgroupId])
 }
 
 model TaskHistory {
@@ -74,7 +77,7 @@ model WorkgroupUserTask {
   workgroupUserId     Int
   WorkgroupUser       WorkgroupUser     @relation(fields: [workgroupUserId], references: [id])
   groupDistributionId String
-  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [code])
+  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [id])
   taskHistoryId       Int
   TaskHistory         TaskHistory       @relation(fields: [taskHistoryId], references: [id])
 
@@ -112,15 +115,29 @@ model ContentDistribution {
   workgroupId           String
   Workgroup             Workgroup         @relation(fields: [workgroupId], references: [id])
   groupDistributionCode String
-  GroupDistribution     GroupDistribution @relation(fields: [groupDistributionCode], references: [code])
+  GroupDistribution     GroupDistribution @relation(fields: [groupDistributionCode], references: [id])
   storyId               String
   Story                 Story             @relation(fields: [storyId], references: [id])
 
   @@unique([workgroupId, groupDistributionCode, storyId, session])
 }
 
+model ScriptProcess {
+  id           String        @id @default(uuid())
+  status       ProcessStatus
+  path         String[]
+  runningStart DateTime      @default(now())
+  runningEnd   DateTime?
+}
+
 enum Role {
   MANAGER
   CREATOR
   DISTRIBUTOR
+}
+
+enum ProcessStatus {
+  RUNNING
+  FINNISHED
+  ERROR
 }

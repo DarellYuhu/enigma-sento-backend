@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import { z } from "zod";
 
 const createWorkgroupUserBody = z.object({
@@ -15,4 +16,21 @@ const createWorkgroupUserResponse = z.object({
   ),
 });
 
-export { createWorkgroupUserBody, createWorkgroupUserResponse };
+const getWorkgroupUsersResponse = z.object({
+  message: z.string(),
+  data: z.array(
+    z.object({
+      workgroupId: z.number(),
+      userId: z.string(),
+      username: z.string(),
+      displayName: z.string(),
+      role: z.nativeEnum(Role),
+    })
+  ),
+});
+
+export {
+  createWorkgroupUserBody,
+  createWorkgroupUserResponse,
+  getWorkgroupUsersResponse,
+};

@@ -7,6 +7,7 @@
     "dev": "bun run --hot --inspect=ws://localhost:6499/debug src/index.ts",
     "lint": "bunx eslint",
     "db:seed": "bunx prisma db seed",
+    "db:reset": "bunx prisma migrate reset",
     "db:migrate": "bunx prisma migrate dev",
     "db:up:dev": "docker compose -f compose.dev.yaml up -d",
     "db:down:dev": "docker compose -f compose.dev.yaml down"

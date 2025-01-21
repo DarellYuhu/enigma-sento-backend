@@ -12,10 +12,17 @@ import {
   workgroupUser,
 } from "./services";
 import { swaggerUI } from "@hono/swagger-ui";
+import { cors } from "hono/cors";
+import { config } from "./config";
 
 const app = new OpenAPIHono();
 
 app.use(logger());
+app.use(
+  cors({
+    origin: config.ALLOWED_ORIGINS,
+  })
+);
 
 app.route("", auth);
 app.route("", user);

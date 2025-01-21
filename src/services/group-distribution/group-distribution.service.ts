@@ -48,7 +48,9 @@ const generateTaskDistribution = async (workgroupId: string) => {
   });
 };
 
-export { addGroupDistributions, generateTaskDistribution };
+const getGroupDistributions = (workgroupId: string) => {
+  return prisma.groupDistribution.findMany({ where: { workgroupId } });
+};
 
 const distributeGroupDistribution = (
   users: WorkgroupUser[],
@@ -65,4 +67,10 @@ const distributeGroupDistribution = (
   }
 
   return result;
+};
+
+export {
+  addGroupDistributions,
+  generateTaskDistribution,
+  getGroupDistributions,
 };

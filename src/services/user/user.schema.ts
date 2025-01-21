@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import { z } from "zod";
 
 const createUserBody = z.object({
@@ -16,6 +17,19 @@ const createUserResponse = z.object({
     role: z.string(),
   }),
 });
+const getUsersResponse = z.object({
+  message: z.string(),
+  data: z.array(
+    z.object({
+      id: z.string(),
+      username: z.string(),
+      displayName: z.string(),
+      role: z.nativeEnum(Role),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    })
+  ),
+});
 
 export type CreateUserSchema = z.infer<typeof createUserBody>;
-export { createUserBody, createUserResponse };
+export { createUserBody, createUserResponse, getUsersResponse };

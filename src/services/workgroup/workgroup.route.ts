@@ -3,12 +3,13 @@ import { jwt } from "hono/jwt";
 import {
   createWorkgroupBody,
   createWorkgroupResponse,
+  getWorkgroupsResponse,
 } from "./workgroup.schema";
 import { config } from "@/config";
 
 const createWorkgroupRoute = createRoute({
   method: "post",
-  path: "/workgroup",
+  path: "/workgroups",
   tags: ["Workgroup"],
   middleware: [jwt({ secret: config.JWT_SECRET })] as const,
   summary: "Create a new workgroup",
@@ -34,4 +35,23 @@ const createWorkgroupRoute = createRoute({
   },
 });
 
-export { createWorkgroupRoute };
+const getWorkgroupsRoute = createRoute({
+  method: "get",
+  path: "/workgroups",
+  tags: ["Workgroup"],
+  middleware: [jwt({ secret: config.JWT_SECRET })] as const,
+  summary: "Get all workgroups",
+  responses: {
+    200: {
+      description: "OK",
+      summary: "Get all workgroups",
+      content: {
+        "application/json": {
+          schema: getWorkgroupsResponse,
+        },
+      },
+    },
+  },
+});
+
+export { createWorkgroupRoute, getWorkgroupsRoute };

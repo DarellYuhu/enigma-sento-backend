@@ -1,5 +1,9 @@
 import { createRoute } from "@hono/zod-openapi";
-import { createUserBody, createUserResponse } from "./user.schema";
+import {
+  createUserBody,
+  createUserResponse,
+  getUsersResponse,
+} from "./user.schema";
 import { zValidator } from "@hono/zod-validator";
 
 const createUserRoute = createRoute({
@@ -29,4 +33,21 @@ const createUserRoute = createRoute({
   },
 });
 
-export { createUserRoute };
+const getUsersRoute = createRoute({
+  method: "get",
+  path: "/users",
+  tags: ["User"],
+  summary: "Get all users",
+  responses: {
+    200: {
+      description: "OK",
+      content: {
+        "application/json": {
+          schema: getUsersResponse,
+        },
+      },
+    },
+  },
+});
+
+export { createUserRoute, getUsersRoute };

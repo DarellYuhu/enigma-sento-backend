@@ -15,4 +15,20 @@ const createWorkgroupResponse = z.object({
     projectStoryPerUser: z.number(),
   }),
 });
-export { createWorkgroupBody, createWorkgroupResponse };
+
+const getWorkgroupsResponse = z.object({
+  message: z.string(),
+  data: z.array(
+    z.object({
+      name: z.string(),
+      session: z.number(),
+      projectStoryPerUser: z.number(),
+      id: z.string(),
+      managerId: z.string(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+    })
+  ),
+});
+
+export { createWorkgroupBody, createWorkgroupResponse, getWorkgroupsResponse };

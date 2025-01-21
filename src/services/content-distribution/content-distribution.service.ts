@@ -50,7 +50,7 @@ const generateContentDistribution = async (projectId: string) => {
   const storyDistribution = WorkgroupUserTask.map((task) => {
     return Array.from({ length: session }).map(
       (_, index): Prisma.ContentDistributionUncheckedCreateInput => {
-        const path = `${task.groupDistributionId}/${index + 1}`;
+        const path = `${project.name}/${task.groupDistributionId}/${index + 1}`;
 
         if (map.has(randomizedStory[storyIndex].id)) {
           const value = map.get(randomizedStory[storyIndex].id);

@@ -5,4 +5,15 @@ const createWorkgroup = (data: Prisma.WorkgroupUncheckedCreateInput) => {
   return prisma.workgroup.create({ data });
 };
 
-export { createWorkgroup };
+const getWorkgroups = (userId: string) => {
+  return prisma.workgroup.findMany({
+    where: {
+      OR: [
+        { Manager: { id: userId } },
+        { WorkgroupUser: { some: { userId } } },
+      ],
+    },
+  });
+};
+
+export { createWorkgroup, getWorkgroups };

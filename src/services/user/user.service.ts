@@ -12,4 +12,8 @@ const createUser = async (data: Prisma.UserCreateInput) => {
   });
 };
 
-export { createUser };
+const getUsers = () => {
+  return prisma.user.findMany({ omit: { password: true } });
+};
+
+export { createUser, getUsers };
