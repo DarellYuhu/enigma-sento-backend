@@ -2,8 +2,8 @@ import { prisma } from "@/db";
 import type { CreateProjectBody } from "./project.schema";
 import { HTTPException } from "hono/http-exception";
 
-const createProject = async (data: CreateProjectBody) => {
-  const { name, userId, workgroupId } = data;
+const createProject = async (data: CreateProjectBody, userId: string) => {
+  const { name, workgroupId } = data;
   const project = await prisma.$transaction(async (db) => {
     const workgroupUser = await db.workgroupUser.findFirst({
       where: { workgroupId, userId, User: { role: "CREATOR" } },
@@ -21,4 +21,10 @@ const createProject = async (data: CreateProjectBody) => {
   return project;
 };
 
-export { createProject };
+const getProjects = (workgroupId: string, userId: string) => {
+  return prisma.project.findMany({
+    where: { workgroupId, WorkgroupUser: { userId } },
+  });
+};
+
+export { createProject, getProjects };

@@ -7,67 +7,34 @@ const jsonSchema: z.ZodType<Json> = z.lazy(() =>
   z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)])
 );
 
-const dataConfigType1 = z.object({
-  texts: z.array(z.string().trim().min(1, "Required")).min(1),
-  textColor: z.string(),
-  textPosition: z.enum([
-    "top-left",
-    "top-center",
-    "top-right",
-    "middle-left",
-    "middle-center",
-    "middle-right",
-    "bottom-left",
-    "bottom-center",
-    "bottom-right",
-  ]),
-});
+const dataConfigType1 = z.array(
+  z.object({
+    texts: z.array(z.string()),
+    textColor: z.string(),
+    textPosition: z.enum([
+      "top-left",
+      "top-center",
+      "top-right",
+      "middle-left",
+      "middle-center",
+      "middle-right",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ]),
+    images: z.array(z.string()),
+  })
+);
 
-const createStoryBody = z.object({
-  section: z
-    .string()
-    .regex(/^[0-9]+$/i, "Section must be a number")
-    .transform(Number)
-    .optional(),
-  type: z.string(),
-  projectId: z.string(),
-  data: jsonSchema.openapi({
-    type: "object",
-    items: {
-      type: "object",
-      properties: {
-        texts: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-        },
-        textColor: {
-          type: "string",
-        },
-        textPosition: {
-          type: "string",
-        },
-      },
-    },
-  }),
-  images: z
-    .array(
-      z
-        .instanceof(File)
-        .refine(
-          (file) => file.type === "image/jpeg" || file.type === "image/png"
-        )
-    )
-    .min(1)
-    .openapi({
-      type: "array",
-      items: {
-        type: "string",
-        format: "binary",
-      },
-    }),
-});
+const createStoryBody = z
+  .object({
+    images: z.array(z.instanceof(File)),
+    data: jsonSchema,
+    type: z.string(),
+    projectId: z.string(),
+    section: z.preprocess((val) => Number(val), z.number().positive()),
+  })
+  .strip();
 
 const createStoryResponse = z.object({
   message: z.string(),

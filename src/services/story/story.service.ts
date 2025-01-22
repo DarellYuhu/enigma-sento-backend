@@ -8,7 +8,7 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
   const urls = await Promise.all(
     images.map(async (file) => {
       const arrayBuffer = await file.arrayBuffer();
-      const fileName = `${Date.now()}_${file.name}`;
+      const fileName = `${payload.projectId}/${Date.now()}_${file.name}`;
       await minio.putObject(
         "images",
         fileName,
@@ -18,11 +18,19 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
           "Content-Type": file.type,
         }
       );
-      return await minio.presignedGetObject("images", file.name, 50000);
+      return [
+        file.name,
+        await minio.presignedGetObject("images", file.name, 50000),
+      ];
     })
   );
+  const urlRecord: Record<string, string> = Object.fromEntries(urls);
+  const jsonPayloadNormalized = jsonPayload.map(({ images, ...item }) => ({
+    ...item,
+    images: images.map((image) => urlRecord[image]),
+  }));
   return await prisma.story.create({
-    data: { ...payload, data: { ...jsonPayload, images: urls } },
+    data: { ...payload, data: jsonPayloadNormalized },
   });
 };
 

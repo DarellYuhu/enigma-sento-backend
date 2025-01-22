@@ -8,7 +8,7 @@ import {
 const createStoryRoute = createRoute({
   tags: ["Story"],
   method: "post",
-  path: "/story",
+  path: "/stories",
   request: {
     body: {
       content: {
