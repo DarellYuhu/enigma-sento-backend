@@ -1,9 +1,10 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import { jwt } from "hono/jwt";
 import {
   createWorkgroupBody,
   createWorkgroupResponse,
   getWorkgroupsResponse,
+  getWorkgroupUserTasksResponse,
 } from "./workgroup.schema";
 import { config } from "@/config";
 
@@ -54,4 +55,28 @@ const getWorkgroupsRoute = createRoute({
   },
 });
 
-export { createWorkgroupRoute, getWorkgroupsRoute };
+const getWorkgroupUserTasksRoute = createRoute({
+  method: "get",
+  path: "/workgroups/{id}/user-tasks",
+  tags: ["Workgroup"],
+  middleware: [jwt({ secret: config.JWT_SECRET })] as const,
+  summary: "Get all workgroup user tasks",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "OK",
+      summary: "Get all workgroup user tasks",
+      content: {
+        "application/json": {
+          schema: getWorkgroupUserTasksResponse,
+        },
+      },
+    },
+  },
+});
+
+export { createWorkgroupRoute, getWorkgroupsRoute, getWorkgroupUserTasksRoute };

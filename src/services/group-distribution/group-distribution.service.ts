@@ -62,7 +62,7 @@ const distributeGroupDistribution = (
 
   for (const task of tasks) {
     const user = randomizedUsers[userIndex];
-    result.push({ workgroupUserId: user.id, groupDistributionId: task.code });
+    result.push({ workgroupUserId: user.id, groupDistributionId: task.id });
     userIndex = (userIndex + 1) % randomizedUsers.length;
   }
 

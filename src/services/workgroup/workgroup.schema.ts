@@ -31,4 +31,23 @@ const getWorkgroupsResponse = z.object({
   ),
 });
 
-export { createWorkgroupBody, createWorkgroupResponse, getWorkgroupsResponse };
+const getWorkgroupUserTasksResponse = z.object({
+  message: z.string(),
+  data: z.record(
+    z.number(),
+    z.object({
+      workgroupUserId: z.number(),
+      displayName: z.string(),
+      distributions: z.array(
+        z.object({ code: z.string(), amontOfTroops: z.number() })
+      ),
+    })
+  ),
+});
+
+export {
+  createWorkgroupBody,
+  createWorkgroupResponse,
+  getWorkgroupsResponse,
+  getWorkgroupUserTasksResponse,
+};

@@ -1,6 +1,14 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { createWorkgroupRoute, getWorkgroupsRoute } from "./workgroup.route";
-import { createWorkgroup, getWorkgroups } from "./workgroup.service";
+import {
+  createWorkgroupRoute,
+  getWorkgroupsRoute,
+  getWorkgroupUserTasksRoute,
+} from "./workgroup.route";
+import {
+  createWorkgroup,
+  getWorkgroups,
+  getWorkgroupUserTasks,
+} from "./workgroup.service";
 import type { TokenPayload } from "@/types";
 import { HTTPException } from "hono/http-exception";
 import { getWorkgroupUsersRoute } from "../workgroup-user/workgroup-user.route";
@@ -26,6 +34,12 @@ workgroup.openapi(getWorkgroupsRoute, async (c) => {
 workgroup.openapi(getWorkgroupUsersRoute, async (c) => {
   const { id } = c.req.param();
   const data = await getWorkgroupUser(id);
+  return c.json({ message: "ok", data });
+});
+
+workgroup.openapi(getWorkgroupUserTasksRoute, async (c) => {
+  const { id } = c.req.param();
+  const data = await getWorkgroupUserTasks(id);
   return c.json({ message: "ok", data });
 });
 
