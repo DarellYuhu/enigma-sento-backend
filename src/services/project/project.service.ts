@@ -24,6 +24,7 @@ const createProject = async (data: CreateProjectBody, userId: string) => {
 const getProjects = (workgroupId: string, userId: string) => {
   return prisma.project.findMany({
     where: { workgroupId, WorkgroupUser: { userId } },
+    include: { Story: true },
   });
 };
 

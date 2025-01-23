@@ -33,7 +33,7 @@ const createStoryRoute = createRoute({
 const updateStoryRoute = createRoute({
   tags: ["Story"],
   method: "patch",
-  path: "/story/{id}",
+  path: "/stories/{id}",
   request: {
     params: z.object({ id: z.string() }),
     body: {

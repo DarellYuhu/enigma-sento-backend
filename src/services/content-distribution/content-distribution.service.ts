@@ -10,6 +10,7 @@ const generateContentDistribution = async (projectId: string) => {
       Story: true,
       Workgroup: {
         select: {
+          projectStoryPerUser: true,
           session: true,
           TaskHistory: {
             select: {
@@ -29,10 +30,13 @@ const generateContentDistribution = async (projectId: string) => {
   });
 
   if (!project) {
-    throw new HTTPException(404, { message: "Project not found" });
+    throw new HTTPException(404, { message: "Project or workgroup not found" });
   }
-  if (project.Story.length < project.Workgroup.session)
-    throw new HTTPException(400, { message: "Not enough stories" });
+  if (
+    project.Story.length < project.Workgroup.session ||
+    project.Story.length < project.Workgroup.projectStoryPerUser
+  )
+    throw new HTTPException(400, { message: "Not enough stories or session" });
 
   const {
     Story,

@@ -29,7 +29,12 @@ const dataConfigType1 = z.array(
 const createStoryBody = z
   .object({
     images: z.array(z.instanceof(File)),
-    data: jsonSchema,
+    data: jsonSchema.openapi({
+      type: "array",
+      items: {
+        type: "object",
+      },
+    }),
     type: z.string(),
     projectId: z.string(),
     section: z.preprocess((val) => Number(val), z.number().positive()),

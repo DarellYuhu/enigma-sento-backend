@@ -20,7 +20,7 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
       );
       return [
         file.name,
-        await minio.presignedGetObject("images", file.name, 50000),
+        await minio.presignedGetObject("images", fileName, 50000),
       ];
     })
   );
