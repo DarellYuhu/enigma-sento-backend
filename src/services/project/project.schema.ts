@@ -1,3 +1,4 @@
+import { StoryType } from "@prisma/client";
 import { z } from "zod";
 
 const createProjectBody = z.object({
@@ -23,6 +24,18 @@ const getProjectsResponse = z.object({
       status: z.boolean(),
       id: z.string(),
       workgroupUserId: z.number(),
+      Story: z.array(
+        z.object({
+          type: z.nativeEnum(StoryType),
+          data: z.any(),
+          id: z.string(),
+          section: z.number().nullable(),
+          contentPerStory: z.number().nullable(),
+          projectId: z.string(),
+          captions: z.array(z.string()),
+          hashtags: z.string().nullable(),
+        })
+      ),
     })
   ),
 });

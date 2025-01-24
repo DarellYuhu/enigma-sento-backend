@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { StoryType } from "@prisma/client";
 
 const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 type Literal = z.infer<typeof literalSchema>;
@@ -26,20 +27,20 @@ const dataConfigType1 = z.array(
   })
 );
 
-const createStoryBody = z
-  .object({
-    images: z.array(z.instanceof(File)),
-    data: jsonSchema.openapi({
+const createStoryBody = z.object({
+  images: z.union([z.array(z.instanceof(File)), z.instanceof(File)]).optional(),
+  data: jsonSchema
+    .openapi({
       type: "array",
       items: {
         type: "object",
       },
-    }),
-    type: z.string(),
-    projectId: z.string(),
-    section: z.preprocess((val) => Number(val), z.number().positive()),
-  })
-  .strip();
+    })
+    .optional(),
+  type: z.nativeEnum(StoryType),
+  projectId: z.string(),
+  section: z.preprocess((val) => Number(val), z.number().positive()).optional(),
+});
 
 const createStoryResponse = z.object({
   message: z.string(),

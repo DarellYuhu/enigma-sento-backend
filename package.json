@@ -9,8 +9,8 @@
     "db:seed": "bunx prisma db seed",
     "db:reset": "bunx prisma migrate reset",
     "db:migrate": "bunx prisma migrate dev",
-    "db:up:dev": "docker compose -f compose.dev.yaml up -d",
-    "db:down:dev": "docker compose -f compose.dev.yaml down"
+    "up:dev": "docker compose -f compose.dev.yaml up -d",
+    "down:dev": "docker compose -f compose.dev.yaml down"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.0",

@@ -7,17 +7,27 @@ import { createStory, updateStory } from "./story.service";
 const story = new OpenAPIHono();
 
 story.openapi(createStoryRoute, async (c) => {
-  const payload = c.req.valid("form");
-  const {
-    success,
-    data: config,
-    error,
-  } = dataConfigType1.safeParse(JSON.parse(payload.data as string));
-  if (!success)
-    throw new HTTPException(400, {
-      message: error.message,
-    });
-  const data = await createStory({ ...payload, data: config });
+  const { images, ...payload } = c.req.valid("form");
+  let jsonConfig: any = null;
+  let imagesPayload: File[] = [];
+  if (payload.type === "SYSTEM_GENERATE") {
+    const {
+      success,
+      data: config,
+      error,
+    } = dataConfigType1.safeParse(JSON.parse(payload.data as string));
+    if (!Array.isArray(images)) imagesPayload.push(images as File);
+    if (!success)
+      throw new HTTPException(400, {
+        message: error.message,
+      });
+    jsonConfig = config;
+  }
+  const data = await createStory({
+    ...payload,
+    data: jsonConfig,
+    images: imagesPayload,
+  });
   return c.json({
     message: "Story created successfully",
     data,

@@ -79,4 +79,31 @@ const getWorkgroupUserTasksRoute = createRoute({
   },
 });
 
-export { createWorkgroupRoute, getWorkgroupsRoute, getWorkgroupUserTasksRoute };
+const getWorkgroupByIdRoute = createRoute({
+  method: "get",
+  path: "/workgroups/{id}",
+  tags: ["Workgroup"],
+  middleware: [jwt({ secret: config.JWT_SECRET })] as const,
+  summary: "Get workgroup by id",
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  responses: {
+    200: {
+      description: "OK",
+      summary: "Get workgroup by id",
+      content: {
+        "application/json": {
+          schema: createWorkgroupResponse,
+        },
+      },
+    },
+  },
+});
+
+export {
+  createWorkgroupRoute,
+  getWorkgroupsRoute,
+  getWorkgroupUserTasksRoute,
+  getWorkgroupByIdRoute,
+};

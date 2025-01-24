@@ -2,11 +2,18 @@ import { minio, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
 
-type Data = Omit<CreateStoryBody, "data"> & { data: DataConfigType1 };
+type Data = Omit<CreateStoryBody, "data" | "images"> & {
+  data?: DataConfigType1;
+  images: File[];
+};
 
 const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
+  if (payload.type === "DRAFT_ONLY")
+    return await prisma.story.create({
+      data: { ...payload },
+    });
   const urls = await Promise.all(
-    images.map(async (file) => {
+    images!.map(async (file) => {
       const arrayBuffer = await file.arrayBuffer();
       const fileName = `${payload.projectId}/${Date.now()}_${file.name}`;
       await minio.putObject(
@@ -25,7 +32,7 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
     })
   );
   const urlRecord: Record<string, string> = Object.fromEntries(urls);
-  const jsonPayloadNormalized = jsonPayload.map(({ images, ...item }) => ({
+  const jsonPayloadNormalized = jsonPayload!.map(({ images, ...item }) => ({
     ...item,
     images: images.map((image) => urlRecord[image]),
   }));

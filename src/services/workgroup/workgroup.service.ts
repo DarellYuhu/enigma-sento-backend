@@ -17,6 +17,9 @@ const getWorkgroups = (userId: string) => {
   });
 };
 
+const getWorkgroupById = (workgroupId: string) =>
+  prisma.workgroup.findUnique({ where: { id: workgroupId } });
+
 const getWorkgroupUserTasks = async (workgroupId: string) => {
   const workgroup = await prisma.workgroup.findUnique({
     where: { id: workgroupId },
@@ -78,4 +81,9 @@ const getWorkgroupUserTasks = async (workgroupId: string) => {
   return grouped;
 };
 
-export { createWorkgroup, getWorkgroups, getWorkgroupUserTasks };
+export {
+  createWorkgroup,
+  getWorkgroups,
+  getWorkgroupUserTasks,
+  getWorkgroupById,
+};

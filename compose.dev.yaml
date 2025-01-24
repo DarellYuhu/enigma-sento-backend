@@ -19,6 +19,17 @@ services:
       - minio-dev-data:/data
     command: server --console-address ":9001" /data
 
+  keycloak-dev:
+    image: quay.io/keycloak/keycloak:26.1.0
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.development
+    command: ["start-dev"]
+    volumes:
+      - keycloak-dev-data:/opt/keycloak/data
+
 volumes:
   db-dev-data:
   minio-dev-data:
+  keycloak-dev-data:

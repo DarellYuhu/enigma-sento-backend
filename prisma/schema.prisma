@@ -100,10 +100,10 @@ model Story {
   section             Int?
   // generate by algorithm
   contentPerStory     Int?
-  type                String
+  type                StoryType
   projectId           String
   Project             Project               @relation(fields: [projectId], references: [id])
-  data                Json
+  data                Json?
   captions            String[]
   hashtags            String?
   ContentDistribution ContentDistribution[]
@@ -140,4 +140,9 @@ enum ProcessStatus {
   RUNNING
   FINNISHED
   ERROR
+}
+
+enum StoryType {
+  DRAFT_ONLY
+  SYSTEM_GENERATE
 }

@@ -1,11 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import {
   createWorkgroupRoute,
+  getWorkgroupByIdRoute,
   getWorkgroupsRoute,
   getWorkgroupUserTasksRoute,
 } from "./workgroup.route";
 import {
   createWorkgroup,
+  getWorkgroupById,
   getWorkgroups,
   getWorkgroupUserTasks,
 } from "./workgroup.service";
@@ -41,6 +43,13 @@ workgroup.openapi(getWorkgroupUserTasksRoute, async (c) => {
   const { id } = c.req.param();
   const data = await getWorkgroupUserTasks(id);
   return c.json({ message: "ok", data });
+});
+
+workgroup.openapi(getWorkgroupByIdRoute, async (c) => {
+  const { id } = c.req.param();
+  const data = await getWorkgroupById(id);
+  if (!data) throw new HTTPException(404, { message: "Workgroup not found" });
+  return c.json({ data, message: "ok" });
 });
 
 export default workgroup;
