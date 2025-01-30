@@ -1,8 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { createStoryRoute, updateStoryRoute } from "./story.route";
+import {
+  createStoryRoute,
+  getGeneratedContentRoute,
+  updateStoryRoute,
+} from "./story.route";
 import { dataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
-import { createStory, updateStory } from "./story.service";
+import { createStory, getGeneratedContent, updateStory } from "./story.service";
 
 const story = new OpenAPIHono();
 
@@ -42,6 +46,15 @@ story.openapi(updateStoryRoute, async (c) => {
     message: "Story updated successfully",
     data,
   });
+});
+
+story.openapi(getGeneratedContentRoute, async (c) => {
+  const { id } = c.req.param();
+  const buffer = await getGeneratedContent(id);
+
+  c.header("Content-Type", "application/octet-stream");
+  c.header("Content-Disposition", `attachment; filename=${id}.tar.gz`);
+  return c.body(buffer);
 });
 
 export default story;

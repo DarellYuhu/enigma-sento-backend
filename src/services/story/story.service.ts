@@ -1,6 +1,7 @@
 import { minio, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
+import { config } from "@/config";
 
 type Data = Omit<CreateStoryBody, "data" | "images"> & {
   data?: DataConfigType1;
@@ -59,4 +60,23 @@ const updateStory = async (data: Partial<UpdateStoryBody>, id: string) => {
   return prisma.story.update({ where: { id }, data });
 };
 
-export { createStory, updateStory };
+const getGeneratedContent = async (storyId: string) => {
+  const story = await prisma.story.findUnique({
+    where: { id: storyId },
+    include: { Project: { select: { name: true } } },
+  });
+
+  const basePath = "./tmp/download";
+
+  await Bun.$`./mc alias set myminio http://localhost:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+  await Bun.$`./mc cp --recursive myminio/images/${story?.Project.name}/${storyId} ${basePath}/${storyId}`;
+  await Bun.$`tar -czf ${basePath}/${storyId}.tar.gz -C ${basePath} ${storyId}`;
+
+  const fileBuffer = await Bun.file(
+    `${basePath}/${storyId}.tar.gz`
+  ).arrayBuffer();
+
+  return fileBuffer;
+};
+
+export { createStory, updateStory, getGeneratedContent };

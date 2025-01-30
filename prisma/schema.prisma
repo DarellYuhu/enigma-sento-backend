@@ -119,7 +119,7 @@ model ContentDistribution {
   storyId               String
   Story                 Story             @relation(fields: [storyId], references: [id])
 
-  @@unique([workgroupId, groupDistributionCode, storyId, session])
+  @@unique([workgroupId, groupDistributionCode, storyId, session], name: "uniqueConstraint")
 }
 
 model ScriptProcess {

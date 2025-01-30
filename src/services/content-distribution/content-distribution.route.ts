@@ -1,5 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { generateContentDistributionResponse } from "./content-distribution.schema";
+import {
+  generateContentDistributionResponse,
+  postGeneratedContentBody,
+} from "./content-distribution.schema";
 
 const generateContentDistributionRoute = createRoute({
   method: "post",
@@ -19,4 +22,22 @@ const generateContentDistributionRoute = createRoute({
   },
 });
 
-export { generateContentDistributionRoute };
+const postGeneratedContentRoute = createRoute({
+  method: "post",
+  path: "/stories/{id}/content-distribution",
+  request: {
+    body: {
+      content: { "multipart/form-data": { schema: postGeneratedContentBody } },
+    },
+  },
+  responses: {
+    200: {
+      description: "OK",
+      content: {
+        "application/json": { schema: generateContentDistributionResponse },
+      },
+    },
+  },
+});
+
+export { generateContentDistributionRoute, postGeneratedContentRoute };

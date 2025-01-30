@@ -57,4 +57,15 @@ const updateStoryRoute = createRoute({
   },
 });
 
-export { createStoryRoute, updateStoryRoute };
+const getGeneratedContentRoute = createRoute({
+  method: "get",
+  path: "/stories/{id}/contents",
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: "OK",
+    },
+  },
+});
+
+export { createStoryRoute, updateStoryRoute, getGeneratedContentRoute };

@@ -2,6 +2,7 @@ import { prisma } from "@/db";
 import type { Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 import { shuffle } from "lodash";
+import { getDownloadUrl, postFileToMinio } from "../storage/storage.service";
 
 const generateContentDistribution = async (projectId: string) => {
   const project = await prisma.project.findUnique({
@@ -54,7 +55,9 @@ const generateContentDistribution = async (projectId: string) => {
   const storyDistribution = WorkgroupUserTask.map((task) => {
     return Array.from({ length: session }).map(
       (_, index): Prisma.ContentDistributionUncheckedCreateInput => {
-        const path = `${project.name}/${task.groupDistributionId}/${index + 1}`;
+        const path = `${project.name}/${randomizedStory[storyIndex].id}/${
+          task.GroupDistribution.code
+        }/${index + 1}`;
 
         if (map.has(randomizedStory[storyIndex].id)) {
           const value = map.get(randomizedStory[storyIndex].id);
@@ -91,6 +94,9 @@ const generateContentDistribution = async (projectId: string) => {
     });
   });
 
+  const deletePrevContentDistTransaction =
+    prisma.contentDistribution.deleteMany({ where: { Story: { projectId } } });
+
   const contentDistributionTransaction =
     prisma.contentDistribution.createManyAndReturn({
       data: payload,
@@ -98,11 +104,40 @@ const generateContentDistribution = async (projectId: string) => {
     });
 
   const res = await prisma.$transaction([
+    deletePrevContentDistTransaction,
     contentDistributionTransaction,
     ...storyTransaction,
   ]);
 
-  return res[0];
+  return res[1];
 };
 
-export { generateContentDistribution };
+const postGeneratedContent = async (storyId: string, files: File[]) => {
+  const story = await prisma.story.findUnique({
+    where: { id: storyId },
+    include: { ContentDistribution: { include: { GroupDistribution: true } } },
+  });
+  if (!story) throw new HTTPException(404, { message: "Story not found" });
+  if (story.contentPerStory !== files.length)
+    throw new HTTPException(400, { message: "Not enough files" });
+  let offset = 0;
+  await Promise.all(
+    story.ContentDistribution.map(async (content) => {
+      const filesPayload = files.slice(
+        offset,
+        content.GroupDistribution.amontOfTroops + offset
+      );
+      offset += content.GroupDistribution.amontOfTroops;
+      await Promise.all(
+        filesPayload.map((file) => postFileToMinio(file, content.path))
+      );
+      const file = await getDownloadUrl(content.path);
+      return { ...content, file };
+    })
+  );
+  return prisma.contentDistribution.findMany({
+    where: { Story: { id: storyId } },
+  });
+};
+
+export { generateContentDistribution, postGeneratedContent };
