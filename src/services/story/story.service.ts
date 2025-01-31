@@ -1,7 +1,6 @@
 import { minio, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
-import { config } from "@/config";
 import { getDownloadUrl } from "../storage/storage.service";
 
 type Data = Omit<CreateStoryBody, "data" | "images"> & {
@@ -62,29 +61,6 @@ const updateStory = async (data: Partial<UpdateStoryBody>, id: string) => {
   return prisma.story.update({ where: { id }, data });
 };
 
-const getGeneratedContent = async (storyId: string) => {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    include: { Project: { select: { name: true } } },
-  });
-
-  const basePath = "./tmp/download";
-
-  await Bun.$`./mc alias set myminio http://localhost:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
-  await Bun.$`./mc cp --recursive myminio/images/${story?.Project.name}/${storyId} ${basePath}/${storyId}`.catch(
-    () => {
-      throw new HTTPException(404, { message: "Story's contents not found" });
-    }
-  );
-  await Bun.$`tar -czf ${basePath}/${storyId}.tar.gz -C ${basePath} ${storyId}`;
-
-  const fileBuffer = await Bun.file(
-    `${basePath}/${storyId}.tar.gz`
-  ).arrayBuffer();
-
-  return fileBuffer;
-};
-
 const generateContent = async (storyId: string) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
@@ -141,4 +117,4 @@ const generateContent = async (storyId: string) => {
   });
 };
 
-export { createStory, updateStory, getGeneratedContent, generateContent };
+export { createStory, updateStory, generateContent };

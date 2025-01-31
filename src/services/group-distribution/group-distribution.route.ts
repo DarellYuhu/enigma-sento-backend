@@ -68,7 +68,28 @@ const getGroupDistributionsRoute = createRoute({
   },
 });
 
+const downloadGroupDistributionRoute = createRoute({
+  method: "post",
+  path: "/group-distributions/{id}/contents",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ projectIds: z.array(z.string()) }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "OK",
+    },
+  },
+});
+
 export {
+  downloadGroupDistributionRoute,
   createGroupDistributionRoute,
   generateTaskDistributionRoute,
   getGroupDistributionsRoute,

@@ -7,6 +7,8 @@ import * as xlsx from "xlsx";
 import { HTTPException } from "hono/http-exception";
 import type { GroupDistribution, WorkgroupUser } from "@prisma/client";
 import { shuffle } from "lodash";
+import { config } from "@/config";
+import { format } from "date-fns";
 
 const addGroupDistributions = async (
   data: CreateGroupDistributionBody,
@@ -69,7 +71,48 @@ const distributeGroupDistribution = (
   return result;
 };
 
+const getGeneratedContent = async (id: string, projectIds: string[]) => {
+  const groupDistribution = await prisma.groupDistribution.findUnique({
+    where: { id },
+    include: {
+      Workgroup: { select: { Project: { where: { id: { in: projectIds } } } } },
+    },
+  });
+
+  if (!groupDistribution)
+    throw new HTTPException(404, { message: "Group distribution not found" });
+
+  const basePath = "./tmp/download";
+  await Bun.$`./mc alias set myminio http://localhost:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+
+  await Promise.all(
+    groupDistribution.Workgroup.Project.map(async ({ name }) => {
+      await Bun.$`./mc cp --recursive myminio/generated-content/${groupDistribution.code}/${name} ${basePath}/${groupDistribution.code}`.catch(
+        () => {
+          throw new HTTPException(404, {
+            message: "Story's contents not found",
+          });
+        }
+      );
+    })
+  );
+  await Bun.$`tar -czf ${basePath}/${groupDistribution.code}.tar.gz -C ${basePath} ${groupDistribution.code}`;
+
+  const fileBuffer = await Bun.file(
+    `${basePath}/${groupDistribution.code}.tar.gz`
+  ).arrayBuffer();
+
+  return {
+    fileBuffer,
+    fileName: `${groupDistribution.code}_${format(
+      new Date(),
+      "yyyy-MM-dd"
+    )}.tar.gz`,
+  };
+};
+
 export {
+  getGeneratedContent,
   addGroupDistributions,
   generateTaskDistribution,
   getGroupDistributions,
