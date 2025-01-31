@@ -1,4 +1,4 @@
-import { prisma } from "@/db";
+import { minio, prisma } from "@/db";
 import type { Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 import { shuffle } from "lodash";
@@ -55,9 +55,9 @@ const generateContentDistribution = async (projectId: string) => {
   const storyDistribution = WorkgroupUserTask.map((task) => {
     return Array.from({ length: session }).map(
       (_, index): Prisma.ContentDistributionUncheckedCreateInput => {
-        const path = `${project.name}/${randomizedStory[storyIndex].id}/${
-          task.GroupDistribution.code
-        }/${index + 1}`;
+        const path = `${task.GroupDistribution.code}/${project.name}/${
+          index + 1
+        }`;
 
         if (map.has(randomizedStory[storyIndex].id)) {
           const value = map.get(randomizedStory[storyIndex].id);
@@ -127,9 +127,25 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
         offset,
         content.GroupDistribution.amontOfTroops + offset
       );
+      const texts = story.captions.slice(
+        offset,
+        content.GroupDistribution.amontOfTroops + offset
+      );
+      const captions = Buffer.from(texts.join("\n"), "utf-8");
+      await minio.putObject(
+        "generated-content",
+        content.path + "/captions.txt",
+        captions,
+        captions.byteLength,
+        {
+          "Content-Type": "text/plain",
+        }
+      );
       offset += content.GroupDistribution.amontOfTroops;
       await Promise.all(
-        filesPayload.map((file) => postFileToMinio(file, content.path))
+        filesPayload.map((file) =>
+          postFileToMinio(file, content.path, "generated-content")
+        )
       );
       const file = await getDownloadUrl(content.path);
       return { ...content, file };

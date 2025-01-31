@@ -1,12 +1,18 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import {
   createStoryRoute,
+  generateContentRoute,
   getGeneratedContentRoute,
   updateStoryRoute,
 } from "./story.route";
 import { dataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
-import { createStory, getGeneratedContent, updateStory } from "./story.service";
+import {
+  createStory,
+  generateContent,
+  getGeneratedContent,
+  updateStory,
+} from "./story.service";
 
 const story = new OpenAPIHono();
 
@@ -21,6 +27,7 @@ story.openapi(createStoryRoute, async (c) => {
       error,
     } = dataConfigType1.safeParse(JSON.parse(payload.data as string));
     if (!Array.isArray(images)) imagesPayload.push(images as File);
+    else imagesPayload = images as File[];
     if (!success)
       throw new HTTPException(400, {
         message: error.message,
@@ -55,6 +62,12 @@ story.openapi(getGeneratedContentRoute, async (c) => {
   c.header("Content-Type", "application/octet-stream");
   c.header("Content-Disposition", `attachment; filename=${id}.tar.gz`);
   return c.body(buffer);
+});
+
+story.openapi(generateContentRoute, async (c) => {
+  const { id } = c.req.param();
+  generateContent(id);
+  return c.json({ message: "ok" });
 });
 
 export default story;

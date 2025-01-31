@@ -1,10 +1,10 @@
 import { minio } from "@/db";
 
-export const postFileToMinio = async (file: File, path: string) => {
+export const postFileToMinio = async ( file: File , path: string, bucketName = 'default') => {
   const arrayBuffer = await file.arrayBuffer();
-  const fileName = `${path}/${Date.now()}_${file.name}`;
+  const fileName = `${path}/${file.name}`;
   await minio.putObject(
-    "images",
+    bucketName,
     fileName,
     Buffer.from(arrayBuffer),
     file.size,
@@ -12,7 +12,7 @@ export const postFileToMinio = async (file: File, path: string) => {
       "Content-Type": file.type,
     }
   );
-  return await minio.presignedGetObject("images", fileName, 50000);
+  return await minio.presignedGetObject(bucketName, fileName, 50000);
 };
 
 export const getDownloadUrl = (path: string) => {

@@ -1,6 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { createProjectRoute, getProjectsRoute } from "./project.route";
-import { createProject, getProjects } from "./project.service";
+import {
+  createProjectRoute,
+  deleteProjectRoute,
+  getProjectsRoute,
+} from "./project.route";
+import { createProject, deleteProject, getProjects } from "./project.service";
 import type { TokenPayload } from "@/types";
 
 const project = new OpenAPIHono();
@@ -17,6 +21,12 @@ project.openapi(getProjectsRoute, async (c) => {
   const jwtPayload: TokenPayload = c.get("jwtPayload");
   const data = await getProjects(workgroupId, jwtPayload.sub);
   return c.json({ message: "ok", data });
+});
+
+project.openapi(deleteProjectRoute, async (c) => {
+  const { projectId } = c.req.param();
+  await deleteProject(projectId);
+  return c.json({ message: "Project deleted" });
 });
 
 export default project;

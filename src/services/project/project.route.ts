@@ -1,4 +1,4 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import {
   createProjectBody,
   createProjectResposne,
@@ -48,4 +48,16 @@ const getProjectsRoute = createRoute({
     },
   },
 });
-export { createProjectRoute, getProjectsRoute };
+
+const deleteProjectRoute = createRoute({
+  method: "delete",
+  path: "/projects/{projectId}",
+  request: { params: z.object({ projectId: z.string() }) },
+  responses: {
+    204: {
+      description: "NO CONTENT",
+    },
+  },
+});
+
+export { createProjectRoute, getProjectsRoute, deleteProjectRoute };

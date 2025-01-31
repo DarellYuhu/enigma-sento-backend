@@ -21,6 +21,7 @@ app.use(logger());
 app.use(
   cors({
     origin: config.ALLOWED_ORIGINS,
+    exposeHeaders: ["Content-Disposition"],
   })
 );
 

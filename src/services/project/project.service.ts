@@ -1,6 +1,8 @@
 import { prisma } from "@/db";
 import type { CreateProjectBody } from "./project.schema";
 import { HTTPException } from "hono/http-exception";
+import type { DataConfigType1 } from "../story/story.schema";
+import { getDownloadUrl } from "../storage/storage.service";
 
 const createProject = async (data: CreateProjectBody, userId: string) => {
   const { name, workgroupId } = data;
@@ -21,11 +23,42 @@ const createProject = async (data: CreateProjectBody, userId: string) => {
   return project;
 };
 
-const getProjects = (workgroupId: string, userId: string) => {
-  return prisma.project.findMany({
+const getProjects = async (workgroupId: string, userId: string) => {
+  const projects = await prisma.project.findMany({
     where: { workgroupId, WorkgroupUser: { userId } },
     include: { Story: true },
   });
+  if (!projects)
+    throw new HTTPException(404, { message: "Projects not found" });
+
+  const response = await Promise.all(
+    projects.map(async ({ Story, ...item }) => ({
+      ...item,
+      Story: await Promise.all(
+        Story.map(async (storyItem) => ({
+          ...storyItem,
+          data: storyItem.data
+            ? await Promise.all(
+                (storyItem.data as DataConfigType1).map(
+                  async (dataItem: DataConfigType1["0"]) => ({
+                    ...dataItem,
+                    images: await Promise.all(
+                      dataItem.images.map((image) => getDownloadUrl(image))
+                    ),
+                  })
+                )
+              )
+            : null,
+        }))
+      ),
+    }))
+  );
+
+  return response;
 };
 
-export { createProject, getProjects };
+const deleteProject = (id: string) => {
+  return prisma.project.delete({ where: { id } });
+};
+
+export { createProject, getProjects, deleteProject };

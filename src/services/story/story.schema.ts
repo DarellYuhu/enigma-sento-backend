@@ -12,17 +12,7 @@ const dataConfigType1 = z.array(
   z.object({
     texts: z.array(z.string()),
     textColor: z.string(),
-    textPosition: z.enum([
-      "top-left",
-      "top-center",
-      "top-right",
-      "middle-left",
-      "middle-center",
-      "middle-right",
-      "bottom-left",
-      "bottom-center",
-      "bottom-right",
-    ]),
+    textPosition: z.enum(["random", "middle", "bottom"]),
     images: z.array(z.string()),
   })
 );

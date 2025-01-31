@@ -93,6 +93,8 @@ model Project {
   workgroupUserId Int
   WorkgroupUser   WorkgroupUser @relation(fields: [workgroupUserId], references: [id])
   Story           Story[]
+
+  @@unique([name, workgroupUserId])
 }
 
 model Story {
@@ -102,7 +104,7 @@ model Story {
   contentPerStory     Int?
   type                StoryType
   projectId           String
-  Project             Project               @relation(fields: [projectId], references: [id])
+  Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   data                Json?
   captions            String[]
   hashtags            String?
@@ -117,7 +119,7 @@ model ContentDistribution {
   groupDistributionCode String
   GroupDistribution     GroupDistribution @relation(fields: [groupDistributionCode], references: [id])
   storyId               String
-  Story                 Story             @relation(fields: [storyId], references: [id])
+  Story                 Story             @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([workgroupId, groupDistributionCode, storyId, session], name: "uniqueConstraint")
 }
@@ -143,6 +145,6 @@ enum ProcessStatus {
 }
 
 enum StoryType {
-  DRAFT_ONLY
+  USER_GENERATE
   SYSTEM_GENERATE
 }
