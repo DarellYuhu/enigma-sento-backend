@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import cv2
 from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_audioclips
 
-FONT = "arial.ttf"
+FONT = "/app/scripts/arial.ttf"
 WIDTH = 2000
 
 def text_wrap(text, font, max_width):
@@ -61,7 +61,7 @@ def create_section(section, num_elements):
         text = "" if not(len(texts)) else random.choice(texts)
         text_font = ImageFont.truetype(font = FONT, size = random.randint(60, 70))
         text_position = pos.get(section["textPosition"])
-        text_color = pos.get(section["textColor"])
+        text_color = section["textColor"]
         # text_bg_color = section["textBgColor"]
         text_bg_color = section.get("textBgColor", "red")
         element_path = random.choice(images_path)
@@ -173,7 +173,7 @@ class Generator():
                     carousels[j][k].save(carousel_path)
                     self.distributed.append(carousel_path)
                     
-            captions = list(map(lambda c: " ".join([c, self.hashtags]), self.captions[l:num_contents]))
+            captions = list(map(lambda c: " ".join([c, self.hashtags]), self.captions[l:l+num_contents]))
             with open(target_path + "/carousels/captions", "w", encoding = "utf8") as fp:
                 fp.write('\n'.join(captions))
                 fp.write('\n')

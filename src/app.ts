@@ -20,7 +20,7 @@ const app = new OpenAPIHono();
 app.use(logger());
 app.use(
   cors({
-    origin: config.ALLOWED_ORIGINS,
+    origin: config.ALLOWED_ORIGINS.split(","),
     exposeHeaders: ["Content-Disposition"],
   })
 );

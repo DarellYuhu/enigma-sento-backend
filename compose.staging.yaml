@@ -1,0 +1,38 @@
+name: enigma-sento-staging
+
+services:
+  app:
+    image: enigma-sento-staging:latest
+    ports:
+      - "3002:3002"
+    environment:
+      - NEXTAUTH_URL=http://165.22.247.113:3002
+
+  backend:
+    image: enigma-sento-backend-staging:latest
+    ports:
+      - "2001:2001"
+
+  db:
+    image: postgres:latest
+    env_file:
+      - .env.staging
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - .env.staging
+    volumes:
+      - minio-data:/data
+    command: server --console-address ":9001" /data
+
+volumes:
+  db-data:
+  minio-data:

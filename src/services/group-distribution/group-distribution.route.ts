@@ -71,6 +71,7 @@ const getGroupDistributionsRoute = createRoute({
 const downloadGroupDistributionRoute = createRoute({
   method: "post",
   path: "/group-distributions/{id}/contents",
+  summary: "Download generated contents",
   request: {
     params: z.object({ id: z.string() }),
     body: {

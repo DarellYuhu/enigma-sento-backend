@@ -51,7 +51,7 @@ story.openapi(updateStoryRoute, async (c) => {
 
 story.openapi(generateContentRoute, async (c) => {
   const { id } = c.req.param();
-  generateContent(id);
+  await generateContent(id);
   return c.json({ message: "ok" });
 });
 

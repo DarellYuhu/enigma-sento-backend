@@ -67,9 +67,13 @@ const generateContent = async (storyId: string) => {
     include: { ContentDistribution: { include: { GroupDistribution: true } } },
   });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
-  if (story.type !== "SYSTEM_GENERATE" && !story.data)
+  if (
+    story.type !== "SYSTEM_GENERATE" ||
+    !story.data ||
+    story.captions.length < (story.contentPerStory ?? -1)
+  )
     throw new HTTPException(400, {
-      message: "This is a system generate story and must have a config in it",
+      message: `You have to provide at least ${story.contentPerStory} captions`,
     });
   const sections = story.data as DataConfigType1;
   const config = {
@@ -89,32 +93,46 @@ const generateContent = async (storyId: string) => {
       amountOfTroops: item.GroupDistribution.amontOfTroops,
       path: item.path,
     })),
-    basePath: `./tmp/${storyId}`,
+    basePath: `${process.cwd()}/tmp/${storyId}`,
   };
 
-  await Bun.write(`${config.basePath}/config.json`, JSON.stringify(config));
-  await Bun.$`./venv/Scripts/python --version`;
-  await Bun.$`./venv/Scripts/python ./scripts/carousels.py ${config.basePath}/config.json`;
+  await Bun.$`mkdir -p ${config.basePath}`;
 
-  const outputFile = Bun.file(`${config.basePath}/out.json`);
-  const { files }: { files: string[] } = await outputFile.json();
-  await minio.bucketExists("generated-content").then((exist) => {
-    if (!exist) minio.makeBucket("generated-content");
-  });
+  Bun.write(`${config.basePath}/config.json`, JSON.stringify(config))
+    .then(async () => {
+      await Bun.$`python --version`;
+      await Bun.$`python scripts/carousels.py ${config.basePath}/config.json`;
 
-  Promise.all(
-    files.map(async (path) => {
-      const bunFile = Bun.file(path);
-      const arrBuff = await bunFile.arrayBuffer();
-      const buff = Buffer.from(arrBuff);
-      const fileName = path.replace(config.basePath, "");
-      await minio.putObject("generated-content", fileName, buff, bunFile.size, {
-        "Content-Type": bunFile.type,
+      const outputFile = Bun.file(`${config.basePath}/out.json`);
+      const { files }: { files: string[] } = await outputFile.json();
+      await minio.bucketExists("generated-content").then((exist) => {
+        if (!exist) minio.makeBucket("generated-content");
+      });
+
+      await Promise.all(
+        files.map(async (path) => {
+          const bunFile = Bun.file(path);
+          const arrBuff = await bunFile.arrayBuffer();
+          const buff = Buffer.from(arrBuff);
+          const fileName = path.replace(config.basePath, "");
+          await minio.putObject(
+            "generated-content",
+            fileName,
+            buff,
+            bunFile.size,
+            {
+              "Content-Type": bunFile.type,
+            }
+          );
+        })
+      ).then(() => {
+        console.log("Upload finished");
       });
     })
-  ).then(() => {
-    console.log("Upload finished");
-  });
+    .catch((e) => console.log(e))
+    .finally(async () => {
+      await Bun.$`rm -rf ${config.basePath}`;
+    });
 };
 
 export { createStory, updateStory, generateContent };

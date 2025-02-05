@@ -118,8 +118,11 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
     include: { ContentDistribution: { include: { GroupDistribution: true } } },
   });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
-  if (story.contentPerStory !== files.length)
-    throw new HTTPException(400, { message: "Not enough files" });
+  if (
+    story.contentPerStory !== files.length ||
+    story.captions.length < story.contentPerStory
+  )
+    throw new HTTPException(400, { message: "Not enough files or captions" });
   let offset = 0;
   await Promise.all(
     story.ContentDistribution.map(async (content) => {
@@ -127,10 +130,9 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
         offset,
         content.GroupDistribution.amontOfTroops + offset
       );
-      const texts = story.captions.slice(
-        offset,
-        content.GroupDistribution.amontOfTroops + offset
-      );
+      const texts = story.captions
+        .slice(offset, content.GroupDistribution.amontOfTroops + offset)
+        .map((item) => item + " " + story.hashtags);
       const captions = Buffer.from(texts.join("\n"), "utf-8");
       await minio.putObject(
         "generated-content",

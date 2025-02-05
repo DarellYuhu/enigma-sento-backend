@@ -50,8 +50,23 @@ const generateTaskDistribution = async (workgroupId: string) => {
   });
 };
 
-const getGroupDistributions = (workgroupId: string) => {
-  return prisma.groupDistribution.findMany({ where: { workgroupId } });
+const getGroupDistributions = async (workgroupId: string) => {
+  const groupDistributions = await prisma.groupDistribution.findMany({
+    where: { workgroupId },
+    include: {
+      ContentDistribution: {
+        select: { Story: { select: { Project: true } } },
+        take: 1,
+      },
+    },
+  });
+  const normalized = groupDistributions.map(
+    ({ ContentDistribution, ...rest }) => ({
+      ...rest,
+      projects: ContentDistribution.map((item) => item.Story.Project),
+    })
+  );
+  return normalized;
 };
 
 const distributeGroupDistribution = (
@@ -83,11 +98,11 @@ const getGeneratedContent = async (id: string, projectIds: string[]) => {
     throw new HTTPException(404, { message: "Group distribution not found" });
 
   const basePath = "./tmp/download";
-  await Bun.$`./mc alias set myminio http://localhost:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+  await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
 
   await Promise.all(
     groupDistribution.Workgroup.Project.map(async ({ name }) => {
-      await Bun.$`./mc cp --recursive myminio/generated-content/${groupDistribution.code}/${name} ${basePath}/${groupDistribution.code}`.catch(
+      await Bun.$`${config.MINIO_CLIENT_COMMAND} cp --recursive myminio/generated-content/${groupDistribution.code}/${name} ${basePath}/${groupDistribution.code}`.catch(
         () => {
           throw new HTTPException(404, {
             message: "Story's contents not found",
