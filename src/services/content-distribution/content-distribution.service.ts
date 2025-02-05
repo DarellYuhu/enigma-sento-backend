@@ -103,9 +103,15 @@ const generateContentDistribution = async (projectId: string) => {
       skipDuplicates: true,
     });
 
+  const updateProjectStatus = prisma.project.update({
+    where: { id: projectId },
+    data: { status: true },
+  });
+
   const res = await prisma.$transaction([
     deletePrevContentDistTransaction,
     contentDistributionTransaction,
+    updateProjectStatus,
     ...storyTransaction,
   ]);
 

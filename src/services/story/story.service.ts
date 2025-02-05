@@ -1,7 +1,8 @@
-import { minio, prisma } from "@/db";
+import { minio, minioS3, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
-import { getDownloadUrl } from "../storage/storage.service";
+import { getDownloadUrl } from "@/services/storage/storage.service";
+import Music from "@/services/asset/entities/music";
 
 type Data = Omit<CreateStoryBody, "data" | "images"> & {
   data?: DataConfigType1;
@@ -79,6 +80,7 @@ const generateContent = async (storyId: string) => {
     where: { id: storyId },
     data: { generatorStatus: "RUNNING" },
   });
+  const musicPath = (await Music.find({})).map(({ path }) => path);
   const sections = story.data as DataConfigType1;
   const config = {
     sections: await Promise.all(
@@ -91,7 +93,9 @@ const generateContent = async (storyId: string) => {
     ),
     captions: story.captions,
     hashtags: story.hashtags ?? "",
-    sounds: [],
+    sounds: musicPath.map((path) =>
+      minioS3.presign(path, { bucket: "assets", method: "GET" })
+    ),
     groupDistribution: story.ContentDistribution.map((item) => ({
       amountOfTroops: item.GroupDistribution.amontOfTroops,
       path: item.path,
