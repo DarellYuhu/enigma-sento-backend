@@ -153,9 +153,16 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
       return { ...content, file };
     })
   );
-  return prisma.contentDistribution.findMany({
-    where: { Story: { id: storyId } },
-  });
+  const res = await prisma.$transaction([
+    prisma.contentDistribution.findMany({
+      where: { Story: { id: storyId } },
+    }),
+    prisma.story.update({
+      where: { id: storyId },
+      data: { generatorStatus: "FINISHED" },
+    }),
+  ]);
+  return res[0];
 };
 
 export { generateContentDistribution, postGeneratedContent };

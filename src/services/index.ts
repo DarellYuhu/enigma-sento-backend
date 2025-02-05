@@ -6,10 +6,12 @@ import groupDistribution from "./group-distribution/group-distribution.controlle
 import project from "./project/project.controller";
 import story from "./story/story.controller";
 import contentDistribution from "./content-distribution/content-distribution.controller";
+import asset from "./asset/asset.controller";
 export {
   auth,
   user,
   story,
+  asset,
   project,
   workgroup,
   workgroupUser,

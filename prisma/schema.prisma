@@ -109,6 +109,7 @@ model Story {
   captions            String[]
   hashtags            String?
   ContentDistribution ContentDistribution[]
+  generatorStatus     GeneratorStatus       @default(NOT_GENERATE)
 }
 
 model ContentDistribution {
@@ -124,23 +125,16 @@ model ContentDistribution {
   @@unique([workgroupId, groupDistributionCode, storyId, session], name: "uniqueConstraint")
 }
 
-model ScriptProcess {
-  id           String        @id @default(uuid())
-  status       ProcessStatus
-  path         String[]
-  runningStart DateTime      @default(now())
-  runningEnd   DateTime?
-}
-
 enum Role {
   MANAGER
   CREATOR
   DISTRIBUTOR
 }
 
-enum ProcessStatus {
+enum GeneratorStatus {
+  NOT_GENERATE
   RUNNING
-  FINNISHED
+  FINISHED
   ERROR
 }
 

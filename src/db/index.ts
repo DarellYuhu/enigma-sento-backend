@@ -1,7 +1,7 @@
 import { config } from "@/config";
 import { PrismaClient } from "@prisma/client";
 import { Client } from "minio";
-import { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const prisma = new PrismaClient();
 const minio = new Client({
@@ -11,7 +11,18 @@ const minio = new Client({
   accessKey: config.MINIO_ACCESS_KEY,
   secretKey: config.MINIO_SECRET_KEY,
 });
+const minioS3 = new Bun.S3Client({
+  endpoint: `http://${config.MINIO_HOST}:${config.MINIO_PORT}`,
+  accessKeyId: config.MINIO_ACCESS_KEY,
+  secretAccessKey: config.MINIO_SECRET_KEY,
+});
 
-const mongo = new Mongoose();
+const connectMongo = async () => {
+  try {
+    await mongoose.connect(config.MONGO_URI, { dbName: "enigma-sento" });
+  } catch (error) {
+    console.error("MongoDB connection error: ", error);
+  }
+};
 
-export { prisma, minio };
+export { prisma, minio, minioS3, connectMongo };

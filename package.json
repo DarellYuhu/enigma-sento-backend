@@ -32,6 +32,7 @@
     "lodash": "^4.17.21",
     "minio": "^8.0.3",
     "mongoose": "^8.9.5",
+    "music-metadata": "^10.8.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.24.1",
     "zod-openapi": "^4.2.2"

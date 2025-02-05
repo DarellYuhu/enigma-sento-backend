@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
 import { logger } from "hono/logger";
 import {
+  asset,
   auth,
   contentDistribution,
   groupDistribution,
@@ -25,14 +26,15 @@ app.use(
   })
 );
 
+app.route("", asset);
 app.route("", auth);
-app.route("", user);
-app.route("", workgroup);
-app.route("", workgroupUser);
+app.route("", contentDistribution);
 app.route("", groupDistribution);
 app.route("", project);
 app.route("", story);
-app.route("", contentDistribution);
+app.route("", user);
+app.route("", workgroup);
+app.route("", workgroupUser);
 
 app.doc("/docs", {
   openapi: "3.0.0",

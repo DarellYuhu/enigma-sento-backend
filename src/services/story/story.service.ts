@@ -75,6 +75,10 @@ const generateContent = async (storyId: string) => {
     throw new HTTPException(400, {
       message: `You have to provide at least ${story.contentPerStory} captions`,
     });
+  await prisma.story.update({
+    where: { id: storyId },
+    data: { generatorStatus: "RUNNING" },
+  });
   const sections = story.data as DataConfigType1;
   const config = {
     sections: await Promise.all(
@@ -83,7 +87,6 @@ const generateContent = async (storyId: string) => {
         images: await Promise.all(
           item.images.map((imagePath) => getDownloadUrl(imagePath))
         ),
-        textPosition: "random",
       }))
     ),
     captions: story.captions,
@@ -102,7 +105,7 @@ const generateContent = async (storyId: string) => {
     .then(async () => {
       await Bun.$`python --version`;
       await Bun.$`python scripts/carousels.py ${config.basePath}/config.json`;
-
+      console.log('Finished "scripts/carousels.py"');
       const outputFile = Bun.file(`${config.basePath}/out.json`);
       const { files }: { files: string[] } = await outputFile.json();
       await minio.bucketExists("generated-content").then((exist) => {
@@ -128,8 +131,19 @@ const generateContent = async (storyId: string) => {
       ).then(() => {
         console.log("Upload finished");
       });
+
+      await prisma.story.update({
+        where: { id: storyId },
+        data: { generatorStatus: "FINISHED" },
+      });
     })
-    .catch((e) => console.log(e))
+    .catch(async (e) => {
+      await prisma.story.update({
+        where: { id: storyId },
+        data: { generatorStatus: "ERROR" },
+      });
+      console.log(e);
+    })
     .finally(async () => {
       await Bun.$`rm -rf ${config.basePath}`;
     });

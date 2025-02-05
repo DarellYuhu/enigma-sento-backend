@@ -168,7 +168,6 @@ RUN python -m ensurepip --default-pip
 # RUN . venv/bin/activate
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r ./scripts/requirements.txt
-RUN pip install opencv-python;
 
 RUN python --version && pip3 --version && mc --version
 

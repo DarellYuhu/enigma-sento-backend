@@ -1,4 +1,4 @@
-import { StoryType } from "@prisma/client";
+import { GeneratorStatus, StoryType } from "@prisma/client";
 import { z } from "zod";
 
 const createProjectBody = z.object({
@@ -34,6 +34,7 @@ const getProjectsResponse = z.object({
           projectId: z.string(),
           captions: z.array(z.string()),
           hashtags: z.string().nullable(),
+          generatorStatus: z.nativeEnum(GeneratorStatus),
         })
       ),
     })
