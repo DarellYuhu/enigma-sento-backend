@@ -22,3 +22,11 @@ export const addMusics = async (files: File[]) => {
     })
   );
 };
+
+export const getAllMusic = async () => {
+  const huhi = (await Music.find({}).lean()).map((item) => ({
+    ...item,
+    path: minioS3.presign(item.path, { bucket: "assets", method: "GET" }),
+  }));
+  return huhi;
+};

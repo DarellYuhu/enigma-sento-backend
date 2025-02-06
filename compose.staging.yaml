@@ -33,6 +33,16 @@ services:
       - minio-data:/data
     command: server --console-address ":9001" /data
 
+  mongo:
+    image: mongo
+    env_file:
+      - .env.staging
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data/db
+
 volumes:
   db-data:
   minio-data:
+  mongo-data:

@@ -56,7 +56,7 @@ const getGroupDistributions = async (workgroupId: string) => {
     include: {
       ContentDistribution: {
         select: { Story: { select: { Project: true } } },
-        take: 1,
+        distinct: ["storyId"],
       },
     },
   });

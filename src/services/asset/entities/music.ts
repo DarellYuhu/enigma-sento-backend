@@ -1,17 +1,21 @@
 import mongoose, { Schema } from "mongoose";
+import { z } from "zod";
 
-interface IMusic {
-  title: string;
-  path: string;
-  type: string;
-  size: number;
-  duration: number;
-  album: string;
-  artist: string;
-  year: number;
-  createdAt: Date;
-  addedAt: Date;
-}
+export const musicZod = z.object({
+  _id: z.string(),
+  title: z.string(),
+  path: z.string(),
+  type: z.string(),
+  size: z.number(),
+  duration: z.number(),
+  album: z.string().optional(),
+  artist: z.string().optional(),
+  year: z.number().optional(),
+  createdAt: z.date().optional(),
+  addedAt: z.date(),
+});
+
+type IMusic = z.infer<typeof musicZod>;
 
 const musicSchema = new Schema<IMusic>({
   title: { type: "String", required: true },
