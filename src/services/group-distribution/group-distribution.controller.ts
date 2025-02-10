@@ -50,8 +50,10 @@ groupDistribution.openapi(downloadGroupDistributionRoute, async (c) => {
 
 groupDistribution.openapi(exportGeneratedTaskRoute, async (c) => {
   const { id } = c.req.valid("param");
-  await exportGeneratedTask(id);
-  return c.json({ message: "ok" });
+  const { fileName, fileBuffer: buffer } = await exportGeneratedTask(id);
+  c.header("Content-Type", "application/octet-stream");
+  c.header("Content-Disposition", `attachment; filename=${fileName}`);
+  return c.body(buffer);
 });
 
 export default groupDistribution;

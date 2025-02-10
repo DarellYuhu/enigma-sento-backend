@@ -9,6 +9,8 @@ import type { GroupDistribution, Project, WorkgroupUser } from "@prisma/client";
 import { shuffle } from "lodash";
 import { config } from "@/config";
 import { format } from "date-fns";
+import * as fs from "fs";
+xlsx.set_fs(fs);
 
 const addGroupDistributions = async (
   data: CreateGroupDistributionBody,
@@ -153,28 +155,42 @@ const exportGeneratedTask = async (taskId: number) => {
 
   for (const item of WorkgroupUserTask) {
     if (!map.has(item.WorkgroupUser.User.id)) {
-      return map.set(item.WorkgroupUser.User.id, {
+      map.set(item.WorkgroupUser.User.id, {
         name: item.WorkgroupUser.User.displayName,
         groupDistribution: [item.GroupDistribution.code],
       });
+    } else {
+      const { groupDistribution, name } = map.get(item.WorkgroupUser.User.id)!;
+      groupDistribution.push(item.GroupDistribution.code);
+      map.set(item.WorkgroupUser.User.id, {
+        name,
+        groupDistribution,
+      });
     }
-    const { groupDistribution, name } = map.get(item.WorkgroupUser.User.id)!;
-    groupDistribution.push(item.GroupDistribution.code);
-    map.set(item.WorkgroupUser.User.id, {
-      name,
-      groupDistribution,
-    });
   }
-  const normalized = {
-    ...task,
-    workgroup: Workgroup,
-    users: WorkgroupUserTask.map(
-      ({ WorkgroupUser, GroupDistribution }) => WorkgroupUser.User
-    ),
+  const worksheet = xlsx.utils.json_to_sheet(
+    map
+      .values()
+      .toArray()
+      .map((item) => ({
+        ...item,
+        groupDistribution: item.groupDistribution.join(", "),
+      }))
+  );
+  const workbook = xlsx.utils.book_new();
+  const fileName = `GroupDistributions_${
+    task.createdAt.toISOString().split("T")[0]
+  }.xlsx`;
+  const filePath = `./tmp/${fileName}`;
+  xlsx.utils.book_append_sheet(workbook, worksheet);
+  xlsx.writeFile(workbook, filePath, { compression: true });
+
+  const fileBuffer = await Bun.file(filePath).arrayBuffer();
+
+  return {
+    fileBuffer,
+    fileName,
   };
-  // const worksheet = xlsx.utils.json_to_sheet(normalized.user);
-  console.log(normalized);
-  return normalized;
 };
 
 export {

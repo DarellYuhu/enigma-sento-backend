@@ -97,7 +97,7 @@ const downloadGroupDistributionRoute = createRoute({
 });
 
 const exportGeneratedTaskRoute = createRoute({
-  method: "get",
+  method: "post",
   path: "/task/{id}/export",
   request: {
     params: z.object({ id: z.preprocess((val) => Number(val), z.number()) }),

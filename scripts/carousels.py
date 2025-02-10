@@ -11,7 +11,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import cv2
 from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_audioclips
 
-FONT = "./scripts/arial.ttf"
+FONT_DIR = "./fonts/"
+FONT = FONT_DIR + random.choice(os.listdir(FONT_DIR))
 WIDTH = 1200
 
 def zoom(image):
@@ -102,17 +103,23 @@ def create_section(section, text_modes):
         
         pos = {"random": random.choice([60, 90]),
                "middle": random.randint(55, 65),
-               "bottom": random.randint(85, 95)}
+               "bottom": random.randint(90, 95)}
+
+        element_path = random.choice(images_path)
+        element = load_image(element_path)
+
+        element_height = element.size[1]
+        font_size_small = int(.0365 * element_height)
+        font_size_big = int(.0380 * element_height)
+        font_size = random.randint(font_size_small, font_size_big)
         
         text = "" if not(len(texts)) else random.choice(texts)
-        text_font = ImageFont.truetype(font = FONT, size = random.randint(60, 70))
+        text_font = ImageFont.truetype(font = FONT, size = font_size)
         text_position = pos.get(section["textPosition"])
         text_color = section.get("textColor", "white")
         text_bg_color = section.get("textBgColor", "black")
-        text_stroke_width = random.randint(5, 10)
+        text_stroke_width = random.randint(5, 8)
         text_stroke_color = section.get("textStColor", "black")
-        element_path = random.choice(images_path)
-        element = load_image(element_path)
 
         if text != "":
 
@@ -131,14 +138,20 @@ def create_section(section, text_modes):
 
             y = y_max
             
+            _r = 0
+            _yr = 0
             for line in lines:
                 _x1, _y1, _x2, _y2 = draw.textbbox((x_min, y), line, font = text_font)
                 x_n = x_min + (x_min + x_max - _x2) / 2
+                if _r == 0:
+                    _yr = _y1 - 15
                 if text_mode == "rectangle":
-                    draw.rounded_rectangle([(x_n - 15, _y1 - 15), (x_n + _x2 - x_min + 15, _y2 + 15)],
-                                            fill = text_bg_color, radius = 3)
+                    draw.rounded_rectangle([(x_n - 15, _yr), (x_n + _x2 - x_min + 15, _y2 + 15)],
+                                            fill = text_bg_color, radius = 5)
+                    _yr = _y2 + 15 - 2
+                    _r += 1
                     draw.text((x_n, y), line, font = text_font, fill = text_color)
-                    y = y + line_height + 2
+                    y = y + line_height + 1
                 else:
                     draw.text((x_n, y), line, font = text_font, fill = text_color, 
                               stroke_width = text_stroke_width, 
@@ -284,15 +297,16 @@ class Generator():
                     self.distributed.append(carousel_path)
 
             if len(self.sounds_path):
+                
                 time.sleep(10)
                 video_temp_paths = []
+
                 for j in range(len(carousels)):
                     video_temp_path = temp_path + "/{}.mp4".format(j + 1)
                     create_video(carousels[j], video_temp_path)
                     video_temp_paths.append(video_temp_path)
                 carousels = []
 
-                time.sleep(10)
                 for j in range(len(video_temp_paths)):
                     video_path = target_path + "/videos/{}.mp4".format(j + 1)
                     create_video_with_sound(self.sounds_path, video_temp_paths[j], video_path)
