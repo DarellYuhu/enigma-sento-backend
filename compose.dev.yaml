@@ -45,8 +45,18 @@ services:
     env_file:
       - .env.development
 
+  redis:
+    image: bitnami/redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6378:6379"
+    volumes:
+      - "redis-dev-data:/bitnami/redis/data"
+
 volumes:
   db-dev-data:
   minio-dev-data:
   keycloak-dev-data:
   mongo-dev-data:
+  redis-dev-data:

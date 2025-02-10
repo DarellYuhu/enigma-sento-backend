@@ -137,19 +137,22 @@ const getGeneratedContent = async (id: string, projectIds: string[]) => {
 };
 
 const exportGeneratedTask = async (taskId: number) => {
-  const { Workgroup, WorkgroupUserTask, ...task } =
-    await prisma.taskHistory.findUniqueOrThrow({
-      where: { id: taskId },
-      include: {
-        Workgroup: true,
-        WorkgroupUserTask: {
-          select: {
-            WorkgroupUser: { select: { User: true } },
-            GroupDistribution: true,
-          },
+  const {
+    Workgroup: _,
+    WorkgroupUserTask,
+    ...task
+  } = await prisma.taskHistory.findUniqueOrThrow({
+    where: { id: taskId },
+    include: {
+      Workgroup: true,
+      WorkgroupUserTask: {
+        select: {
+          WorkgroupUser: { select: { User: true } },
+          GroupDistribution: true,
         },
       },
-    });
+    },
+  });
 
   const map = new Map<string, { name: string; groupDistribution: string[] }>();
 

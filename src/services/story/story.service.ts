@@ -3,6 +3,7 @@ import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
 import { getDownloadUrl } from "@/services/storage/storage.service";
 import Music from "@/services/asset/entities/music";
+import { queue } from "@/lib/generator";
 
 type Data = Omit<CreateStoryBody, "data" | "images"> & {
   data?: DataConfigType1;
@@ -72,8 +73,8 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
     include: { ContentDistribution: { include: { GroupDistribution: true } } },
   });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
-  if (story.generatorStatus === "RUNNING")
-    throw new HTTPException(400, { message: "Story is being generated" });
+  // if (story.generatorStatus === "RUNNING")
+  //   throw new HTTPException(400, { message: "Story is being generated" });
   if (
     story.type !== "SYSTEM_GENERATE" ||
     !story.data ||
@@ -113,59 +114,7 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
 
   await Bun.$`mkdir -p ${config.basePath}`;
 
-  console.log("huhi");
-
-  Bun.write(`${config.basePath}/config.json`, JSON.stringify(config))
-    .then(async () => {
-      await Bun.$`python --version`;
-      await Bun.$`python scripts/carousels.py ${config.basePath}/config.json`;
-      console.log('Finished "scripts/carousels.py"');
-      const outputFile = Bun.file(`${config.basePath}/out.json`);
-      const { files }: { files: string[] } = await outputFile.json();
-      // await minio.bucketExists("generated-content").then((exist) => {
-      //   if (!exist) minio.makeBucket("generated-content");
-      // });
-
-      await Promise.all(
-        files.map(async (path) => {
-          const bunFile = Bun.file(path);
-          const arrBuff = await bunFile.arrayBuffer();
-          const buff = Buffer.from(arrBuff);
-          const fileName = path.replace(config.basePath, "");
-          await minioS3.delete(fileName, { bucket: "generated-content" });
-          // await minio.putObject(
-          //   "generated-content",
-          //   fileName,
-          //   buff,
-          //   bunFile.size,
-          //   {
-          //     "Content-Type": bunFile.type,
-          //   }
-          // );
-          await minioS3.write(fileName, buff, {
-            bucket: "generated-content",
-            type: bunFile.type,
-          });
-        })
-      ).then(() => {
-        console.log("Upload finished");
-      });
-
-      await prisma.story.update({
-        where: { id: storyId },
-        data: { generatorStatus: "FINISHED" },
-      });
-    })
-    .catch(async (e) => {
-      await prisma.story.update({
-        where: { id: storyId },
-        data: { generatorStatus: "ERROR" },
-      });
-      console.log(e);
-    })
-    .finally(async () => {
-      await Bun.$`rm -rf ${config.basePath}`;
-    });
+  await queue.add(storyId, { ...config, storyId });
 };
 
 const deleteStory = (id: string) => {

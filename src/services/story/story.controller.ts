@@ -58,7 +58,6 @@ story.openapi(updateStoryRoute, async (c) => {
 story.openapi(generateContentRoute, async (c) => {
   const { id } = c.req.param();
   const { withMusic } = c.req.valid("query");
-  console.log("huhi");
   await generateContent(id, withMusic);
   return c.json({ message: "ok" });
 });
