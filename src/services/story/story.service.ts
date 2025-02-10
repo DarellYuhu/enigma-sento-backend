@@ -1,4 +1,4 @@
-import { minio, minioS3, prisma } from "@/db";
+import { minioS3, prisma } from "@/db";
 import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
 import { getDownloadUrl } from "@/services/storage/storage.service";
@@ -22,15 +22,19 @@ const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
     images!.map(async (file) => {
       const arrayBuffer = await file.arrayBuffer();
       const fileName = `${project.name}/assets/${Date.now()}_${file.name}`;
-      await minio.putObject(
-        "images",
-        fileName,
-        Buffer.from(arrayBuffer),
-        file.size,
-        {
-          "Content-Type": file.type,
-        }
-      );
+      await minioS3.write(fileName, arrayBuffer, {
+        bucket: "images",
+        type: file.type,
+      });
+      // await minio.putObject(
+      //   "images",
+      //   fileName,
+      //   Buffer.from(arrayBuffer),
+      //   file.size,
+      //   {
+      //     "Content-Type": file.type,
+      //   }
+      // );
       return [file.name, fileName];
     })
   );
@@ -62,12 +66,14 @@ const updateStory = async (data: Partial<UpdateStoryBody>, id: string) => {
   return prisma.story.update({ where: { id }, data });
 };
 
-const generateContent = async (storyId: string) => {
+const generateContent = async (storyId: string, withMusic: boolean = false) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
     include: { ContentDistribution: { include: { GroupDistribution: true } } },
   });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
+  if (story.generatorStatus === "RUNNING")
+    throw new HTTPException(400, { message: "Story is being generated" });
   if (
     story.type !== "SYSTEM_GENERATE" ||
     !story.data ||
@@ -80,7 +86,9 @@ const generateContent = async (storyId: string) => {
     where: { id: storyId },
     data: { generatorStatus: "RUNNING" },
   });
-  const musicPath = (await Music.find({})).map(({ path }) => path);
+  const musicPath = withMusic
+    ? (await Music.find({})).map(({ path }) => path)
+    : [];
   const sections = story.data as DataConfigType1;
   const config = {
     sections: await Promise.all(
@@ -105,6 +113,8 @@ const generateContent = async (storyId: string) => {
 
   await Bun.$`mkdir -p ${config.basePath}`;
 
+  console.log("huhi");
+
   Bun.write(`${config.basePath}/config.json`, JSON.stringify(config))
     .then(async () => {
       await Bun.$`python --version`;
@@ -112,9 +122,9 @@ const generateContent = async (storyId: string) => {
       console.log('Finished "scripts/carousels.py"');
       const outputFile = Bun.file(`${config.basePath}/out.json`);
       const { files }: { files: string[] } = await outputFile.json();
-      await minio.bucketExists("generated-content").then((exist) => {
-        if (!exist) minio.makeBucket("generated-content");
-      });
+      // await minio.bucketExists("generated-content").then((exist) => {
+      //   if (!exist) minio.makeBucket("generated-content");
+      // });
 
       await Promise.all(
         files.map(async (path) => {
@@ -122,15 +132,20 @@ const generateContent = async (storyId: string) => {
           const arrBuff = await bunFile.arrayBuffer();
           const buff = Buffer.from(arrBuff);
           const fileName = path.replace(config.basePath, "");
-          await minio.putObject(
-            "generated-content",
-            fileName,
-            buff,
-            bunFile.size,
-            {
-              "Content-Type": bunFile.type,
-            }
-          );
+          await minioS3.delete(fileName, { bucket: "generated-content" });
+          // await minio.putObject(
+          //   "generated-content",
+          //   fileName,
+          //   buff,
+          //   bunFile.size,
+          //   {
+          //     "Content-Type": bunFile.type,
+          //   }
+          // );
+          await minioS3.write(fileName, buff, {
+            bucket: "generated-content",
+            type: bunFile.type,
+          });
         })
       ).then(() => {
         console.log("Upload finished");
@@ -153,4 +168,8 @@ const generateContent = async (storyId: string) => {
     });
 };
 
-export { createStory, updateStory, generateContent };
+const deleteStory = (id: string) => {
+  return prisma.story.delete({ where: { id } });
+};
+
+export { createStory, deleteStory, updateStory, generateContent };

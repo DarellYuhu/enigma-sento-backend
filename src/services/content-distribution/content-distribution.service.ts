@@ -1,8 +1,9 @@
-import { minio, prisma } from "@/db";
+import { minioS3, prisma } from "@/db";
 import type { Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 import { shuffle } from "lodash";
 import { getDownloadUrl, postFileToMinio } from "../storage/storage.service";
+import { config } from "@/config";
 
 const generateContentDistribution = async (projectId: string) => {
   const project = await prisma.project.findUnique({
@@ -130,6 +131,7 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
   )
     throw new HTTPException(400, { message: "Not enough files or captions" });
   let offset = 0;
+  await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
   await Promise.all(
     story.ContentDistribution.map(async (content) => {
       const filesPayload = files.slice(
@@ -140,16 +142,21 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
         .slice(offset, content.GroupDistribution.amontOfTroops + offset)
         .map((item) => item + " " + story.hashtags);
       const captions = Buffer.from(texts.join("\n"), "utf-8");
-      await minio.putObject(
-        "generated-content",
-        content.path + "/captions.txt",
-        captions,
-        captions.byteLength,
-        {
-          "Content-Type": "text/plain",
-        }
-      );
+      // await minio.putObject(
+      //   "generated-content",
+      //   content.path + "/captions.txt",
+      //   captions,
+      //   captions.byteLength,
+      //   {
+      //     "Content-Type": "text/plain",
+      //   }
+      // );
+      await minioS3.write(`${content.path}/captions.txt`, captions, {
+        type: "text/plain",
+        bucket: "generated-content",
+      });
       offset += content.GroupDistribution.amontOfTroops;
+      await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${content.path}`;
       await Promise.all(
         filesPayload.map((file) =>
           postFileToMinio(file, content.path, "generated-content")

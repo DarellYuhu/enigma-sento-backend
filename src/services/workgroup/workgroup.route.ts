@@ -7,6 +7,7 @@ import {
   getWorkgroupUserTasksResponse,
 } from "./workgroup.schema";
 import { config } from "@/config";
+import { rbacMiddleware } from "@/middlewares/rbacMiddleware";
 
 const createWorkgroupRoute = createRoute({
   method: "post",
@@ -101,9 +102,32 @@ const getWorkgroupByIdRoute = createRoute({
   },
 });
 
+const deleteWorkgroupUserRoute = createRoute({
+  method: "delete",
+  path: "/workgroups/{workgroupId}/users/{userId}",
+  tags: ["Workgroup"],
+  middleware: [
+    jwt({ secret: config.JWT_SECRET }),
+    rbacMiddleware(["MANAGER"]),
+  ] as const,
+  summary: "Delete workgroup user",
+  request: {
+    params: z.object({
+      workgroupId: z.string(),
+      userId: z.string(),
+    }),
+  },
+  responses: {
+    204: {
+      description: "OK",
+    },
+  },
+});
+
 export {
   createWorkgroupRoute,
   getWorkgroupsRoute,
   getWorkgroupUserTasksRoute,
   getWorkgroupByIdRoute,
+  deleteWorkgroupUserRoute,
 };

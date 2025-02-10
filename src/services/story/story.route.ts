@@ -4,6 +4,9 @@ import {
   createStoryResponse,
   updateStoryBody,
 } from "./story.schema";
+import { rbacMiddleware } from "@/middlewares/rbacMiddleware";
+import { config } from "@/config";
+import { jwt } from "hono/jwt";
 
 const createStoryRoute = createRoute({
   tags: ["Story"],
@@ -60,7 +63,12 @@ const updateStoryRoute = createRoute({
 const generateContentRoute = createRoute({
   method: "patch",
   path: "/stories/{id}/contents",
-  request: { params: z.object({ id: z.string() }) },
+  request: {
+    params: z.object({ id: z.string() }),
+    query: z.object({
+      withMusic: z.preprocess((val) => val === "true", z.boolean()),
+    }),
+  },
   responses: {
     200: {
       description: "OK",
@@ -68,4 +76,28 @@ const generateContentRoute = createRoute({
   },
 });
 
-export { createStoryRoute, updateStoryRoute, generateContentRoute };
+const deleteStoryRoute = createRoute({
+  tags: ["Story"],
+  method: "delete",
+  path: "/stories/{id}",
+  summary: "Delete story",
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  middleware: [
+    jwt({ secret: config.JWT_SECRET }),
+    rbacMiddleware(["CREATOR"]),
+  ] as const,
+  responses: {
+    204: {
+      description: "NO CONTENT",
+    },
+  },
+});
+
+export {
+  createStoryRoute,
+  updateStoryRoute,
+  generateContentRoute,
+  deleteStoryRoute,
+};

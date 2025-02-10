@@ -6,13 +6,13 @@
   "configurations": [
     {
       "type": "bun",
-      "internalConsoleOptions": "neverOpen",
+      "internalConsoleOptions": "openOnSessionStart",
       "request": "launch",
       "name": "Debug File",
-      "program": "${file}",
+      "program": "src/index.ts",
       "cwd": "${workspaceFolder}",
       "stopOnEntry": false,
-      "watchMode": false
+      "watchMode": true
     },
     {
       "type": "bun",

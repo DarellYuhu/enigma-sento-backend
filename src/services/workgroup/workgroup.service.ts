@@ -81,9 +81,16 @@ const getWorkgroupUserTasks = async (workgroupId: string) => {
   return grouped;
 };
 
+const deleteWorkgroupUser = (workgroupId: string, userId: string) => {
+  return prisma.workgroupUser.delete({
+    where: { workgroupId_userId: { workgroupId, userId } },
+  });
+};
+
 export {
   createWorkgroup,
   getWorkgroups,
   getWorkgroupUserTasks,
   getWorkgroupById,
+  deleteWorkgroupUser,
 };

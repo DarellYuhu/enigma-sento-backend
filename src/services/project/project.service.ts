@@ -26,7 +26,7 @@ const createProject = async (data: CreateProjectBody, userId: string) => {
 const getProjects = async (workgroupId: string, userId: string) => {
   const projects = await prisma.project.findMany({
     where: { workgroupId, WorkgroupUser: { userId } },
-    include: { Story: true },
+    include: { Story: { orderBy: { id: "asc" } } },
   });
   if (!projects)
     throw new HTTPException(404, { message: "Projects not found" });

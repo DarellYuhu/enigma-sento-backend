@@ -283,16 +283,16 @@ class Generator():
                     carousels[j][k].save(carousel_path)
                     self.distributed.append(carousel_path)
 
-            time.sleep(10)
-            video_temp_paths = []
-            for j in range(len(carousels)):
-                video_temp_path = temp_path + "/{}.mp4".format(j + 1)
-                create_video(carousels[j], video_temp_path)
-                video_temp_paths.append(video_temp_path)
-            carousels = []
-
-            time.sleep(10)
             if len(self.sounds_path):
+                time.sleep(10)
+                video_temp_paths = []
+                for j in range(len(carousels)):
+                    video_temp_path = temp_path + "/{}.mp4".format(j + 1)
+                    create_video(carousels[j], video_temp_path)
+                    video_temp_paths.append(video_temp_path)
+                carousels = []
+
+                time.sleep(10)
                 for j in range(len(video_temp_paths)):
                     video_path = target_path + "/videos/{}.mp4".format(j + 1)
                     create_video_with_sound(self.sounds_path, video_temp_paths[j], video_path)

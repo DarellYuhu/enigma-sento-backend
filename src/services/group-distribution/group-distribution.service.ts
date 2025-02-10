@@ -5,7 +5,7 @@ import {
 } from "./group-distribution.schema";
 import * as xlsx from "xlsx";
 import { HTTPException } from "hono/http-exception";
-import type { GroupDistribution, WorkgroupUser } from "@prisma/client";
+import type { GroupDistribution, Project, WorkgroupUser } from "@prisma/client";
 import { shuffle } from "lodash";
 import { config } from "@/config";
 import { format } from "date-fns";
@@ -56,15 +56,23 @@ const getGroupDistributions = async (workgroupId: string) => {
     include: {
       ContentDistribution: {
         select: { Story: { select: { Project: true } } },
-        distinct: ["storyId"],
       },
     },
   });
   const normalized = groupDistributions.map(
-    ({ ContentDistribution, ...rest }) => ({
-      ...rest,
-      projects: ContentDistribution.map((item) => item.Story.Project),
-    })
+    ({ ContentDistribution, ...rest }) => {
+      const projects = new Map<string, Project>();
+      for (const item of ContentDistribution) {
+        if (!projects.has(item.Story.Project.id)) {
+          projects.set(item.Story.Project.id, item.Story.Project);
+        }
+      }
+
+      return {
+        ...rest,
+        projects: Array.from(projects.values()),
+      };
+    }
   );
   return normalized;
 };
@@ -126,8 +134,52 @@ const getGeneratedContent = async (id: string, projectIds: string[]) => {
   };
 };
 
+const exportGeneratedTask = async (taskId: number) => {
+  const { Workgroup, WorkgroupUserTask, ...task } =
+    await prisma.taskHistory.findUniqueOrThrow({
+      where: { id: taskId },
+      include: {
+        Workgroup: true,
+        WorkgroupUserTask: {
+          select: {
+            WorkgroupUser: { select: { User: true } },
+            GroupDistribution: true,
+          },
+        },
+      },
+    });
+
+  const map = new Map<string, { name: string; groupDistribution: string[] }>();
+
+  for (const item of WorkgroupUserTask) {
+    if (!map.has(item.WorkgroupUser.User.id)) {
+      return map.set(item.WorkgroupUser.User.id, {
+        name: item.WorkgroupUser.User.displayName,
+        groupDistribution: [item.GroupDistribution.code],
+      });
+    }
+    const { groupDistribution, name } = map.get(item.WorkgroupUser.User.id)!;
+    groupDistribution.push(item.GroupDistribution.code);
+    map.set(item.WorkgroupUser.User.id, {
+      name,
+      groupDistribution,
+    });
+  }
+  const normalized = {
+    ...task,
+    workgroup: Workgroup,
+    users: WorkgroupUserTask.map(
+      ({ WorkgroupUser, GroupDistribution }) => WorkgroupUser.User
+    ),
+  };
+  // const worksheet = xlsx.utils.json_to_sheet(normalized.user);
+  console.log(normalized);
+  return normalized;
+};
+
 export {
   getGeneratedContent,
+  exportGeneratedTask,
   addGroupDistributions,
   generateTaskDistribution,
   getGroupDistributions,

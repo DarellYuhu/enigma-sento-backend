@@ -5,6 +5,9 @@ import {
   generateGroupDistributionTaskResponse,
   getGroupDistributionsResponse,
 } from "./group-distribution.schema";
+import { config } from "@/config";
+import { jwt } from "hono/jwt";
+import { rbacMiddleware } from "@/middlewares/rbacMiddleware";
 
 const createGroupDistributionRoute = createRoute({
   method: "post",
@@ -38,6 +41,10 @@ const generateTaskDistributionRoute = createRoute({
   method: "get",
   path: "/workgroup/{id}/generate-distribution",
   summary: "Generate group distribution for each user fairly",
+  middleware: [
+    jwt({ secret: config.JWT_SECRET }),
+    rbacMiddleware(["MANAGER"]),
+  ] as const,
   request: {
     params: z.object({ id: z.string() }),
   },
@@ -89,7 +96,20 @@ const downloadGroupDistributionRoute = createRoute({
   },
 });
 
+const exportGeneratedTaskRoute = createRoute({
+  method: "get",
+  path: "/task/{id}/export",
+  request: {
+    params: z.object({ id: z.preprocess((val) => Number(val), z.number()) }),
+  },
+  responses: {
+    200: {
+      description: "OK",
+    },
+  },
+});
 export {
+  exportGeneratedTaskRoute,
   downloadGroupDistributionRoute,
   createGroupDistributionRoute,
   generateTaskDistributionRoute,

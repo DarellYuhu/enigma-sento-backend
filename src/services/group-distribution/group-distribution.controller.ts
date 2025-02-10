@@ -2,11 +2,13 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import {
   createGroupDistributionRoute,
   downloadGroupDistributionRoute,
+  exportGeneratedTaskRoute,
   generateTaskDistributionRoute,
   getGroupDistributionsRoute,
 } from "./group-distribution.route";
 import {
   addGroupDistributions,
+  exportGeneratedTask,
   generateTaskDistribution,
   getGeneratedContent,
   getGroupDistributions,
@@ -44,6 +46,12 @@ groupDistribution.openapi(downloadGroupDistributionRoute, async (c) => {
   c.header("Content-Type", "application/octet-stream");
   c.header("Content-Disposition", `attachment; filename=${fileName}`);
   return c.body(buffer);
+});
+
+groupDistribution.openapi(exportGeneratedTaskRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  await exportGeneratedTask(id);
+  return c.json({ message: "ok" });
 });
 
 export default groupDistribution;
