@@ -1,8 +1,13 @@
+import { config } from "@/config";
 import { minioS3, prisma } from "@/db";
 import type { DataConfigType1 } from "@/services/story/story.schema";
-import { Queue, Worker } from "bullmq";
+import { Queue, Worker, type ConnectionOptions } from "bullmq";
 
-const connection = { host: "localhost", port: 6378 };
+const connection: ConnectionOptions = {
+  host: config.REDIS_HOST,
+  port: config.REDIS_PORT,
+  password: config.REDIS_PASSWORD,
+};
 export const queue = new Queue("script-queue", {
   connection,
 });

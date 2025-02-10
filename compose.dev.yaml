@@ -45,10 +45,10 @@ services:
     env_file:
       - .env.development
 
-  redis:
+  redis-dev:
     image: bitnami/redis
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+    env_file:
+      - .env.development
     ports:
       - "6378:6379"
     volumes:
