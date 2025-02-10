@@ -47,6 +47,7 @@ model WorkgroupUser {
   User              User                @relation(fields: [userId], references: [id])
   workgroupId       String
   Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  isDeleted         Boolean             @default(false)
   WorkgroupUserTask WorkgroupUserTask[]
   Project           Project[]
 

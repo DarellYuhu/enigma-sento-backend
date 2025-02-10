@@ -1,6 +1,7 @@
 import { prisma } from "@/db";
 import type { Prisma } from "@prisma/client";
-import { HTTPException } from "hono/http-exception";
+import type { z } from "zod";
+import type { getWorkgroupUserTasksResponse } from "./workgroup.schema";
 
 const createWorkgroup = (data: Prisma.WorkgroupUncheckedCreateInput) => {
   return prisma.workgroup.create({ data });
@@ -21,11 +22,10 @@ const getWorkgroupById = (workgroupId: string) =>
   prisma.workgroup.findUnique({ where: { id: workgroupId } });
 
 const getWorkgroupUserTasks = async (workgroupId: string) => {
-  const workgroup = await prisma.workgroup.findUnique({
+  const { TaskHistory } = await prisma.workgroup.findUniqueOrThrow({
     where: { id: workgroupId },
     include: {
       TaskHistory: {
-        take: 1,
         orderBy: { createdAt: "desc" },
         include: {
           WorkgroupUserTask: {
@@ -41,51 +41,60 @@ const getWorkgroupUserTasks = async (workgroupId: string) => {
     },
   });
 
-  if (!workgroup)
-    throw new HTTPException(404, { message: "Workgroup not found" });
-  const { TaskHistory } = workgroup;
-
-  const normalized = TaskHistory.flatMap((task) =>
-    task.WorkgroupUserTask.map(
-      ({ workgroupUserId, WorkgroupUser, GroupDistribution }) => ({
-        workgroupUserId,
-        displayName: WorkgroupUser.User.displayName,
-        ...GroupDistribution,
-      })
-    )
-  );
-
-  const grouped = normalized.reduce<
-    Record<
-      number,
-      {
-        workgroupUserId: number;
-        displayName: string;
-        distributions: { code: string; amontOfTroops: number }[];
+  const normalized = TaskHistory.map(({ WorkgroupUserTask, ...rest }) => {
+    const map = new Map<number, Distributions["0"]>();
+    for (const {
+      WorkgroupUser,
+      GroupDistribution,
+      workgroupUserId,
+    } of WorkgroupUserTask) {
+      if (!map.has(WorkgroupUser.id)) {
+        map.set(WorkgroupUser.id, {
+          displayName: WorkgroupUser.User.displayName,
+          workgroupUserId: workgroupUserId,
+          distributions: [
+            {
+              code: GroupDistribution.code,
+              amontOfTroops: GroupDistribution.amontOfTroops,
+            },
+          ],
+        });
+      } else {
+        const { distributions, ...rest } = map.get(workgroupUserId)!;
+        map.set(workgroupUserId, {
+          ...rest,
+          distributions: [
+            ...distributions,
+            {
+              code: GroupDistribution.code,
+              amontOfTroops: GroupDistribution.amontOfTroops,
+            },
+          ],
+        });
       }
-    >
-  >((curr, acc) => {
-    if (!curr[acc.workgroupUserId]) {
-      curr[acc.workgroupUserId] = {
-        workgroupUserId: acc.workgroupUserId,
-        displayName: acc.displayName,
-        distributions: [],
-      };
     }
-    curr[acc.workgroupUserId].distributions.push({
-      code: acc.code,
-      amontOfTroops: acc.amontOfTroops,
-    });
-    return curr;
-  }, {});
-  return grouped;
+    return [
+      rest.id,
+      {
+        ...rest,
+        users: Array.from(map.values()),
+      },
+    ];
+  });
+
+  return Object.fromEntries(normalized);
 };
 
 const deleteWorkgroupUser = (workgroupId: string, userId: string) => {
-  return prisma.workgroupUser.delete({
+  return prisma.workgroupUser.update({
     where: { workgroupId_userId: { workgroupId, userId } },
+    data: { isDeleted: true },
   });
 };
+
+type Distributions = z.infer<
+  typeof getWorkgroupUserTasksResponse
+>["data"]["0"]["users"];
 
 export {
   createWorkgroup,

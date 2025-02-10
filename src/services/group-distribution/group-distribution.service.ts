@@ -29,7 +29,7 @@ const generateTaskDistribution = async (workgroupId: string) => {
     where: { id: workgroupId },
     include: {
       DistributionGroup: true,
-      WorkgroupUser: { where: { User: { role: "CREATOR" } } },
+      WorkgroupUser: { where: { User: { role: "CREATOR" }, isDeleted: false } },
     },
   });
   if (!workgroup) {

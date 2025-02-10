@@ -36,10 +36,21 @@ const getWorkgroupUserTasksResponse = z.object({
   data: z.record(
     z.number(),
     z.object({
-      workgroupUserId: z.number(),
-      displayName: z.string(),
-      distributions: z.array(
-        z.object({ code: z.string(), amontOfTroops: z.number() })
+      id: z.number(),
+      createdAt: z.date(),
+      workgroupId: z.string(),
+      users: z.record(
+        z.number(),
+        z.object({
+          workgroupUserId: z.number(),
+          displayName: z.string(),
+          distributions: z.array(
+            z.object({
+              code: z.string(),
+              amontOfTroops: z.number(),
+            })
+          ),
+        })
       ),
     })
   ),

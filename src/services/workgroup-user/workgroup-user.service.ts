@@ -1,17 +1,20 @@
 import { prisma } from "@/db";
-import type { Prisma } from "@prisma/client";
 
 const addWorkgroupUser = (ids: string[], workgroupId: string) => {
-  const data: Prisma.WorkgroupUserCreateManyInput[] = ids.map((id) => ({
-    userId: id,
-    workgroupId,
-  }));
-  return prisma.workgroupUser.createManyAndReturn({ data });
+  return prisma.$transaction(
+    ids.map((userId) =>
+      prisma.workgroupUser.upsert({
+        create: { userId, workgroupId },
+        update: { isDeleted: false },
+        where: { workgroupId_userId: { userId, workgroupId } },
+      })
+    )
+  );
 };
 
 const getWorkgroupUser = async (workgroupId: string) => {
   const workgroups = await prisma.workgroupUser.findMany({
-    where: { workgroupId },
+    where: { workgroupId, isDeleted: false },
     include: {
       User: { select: { username: true, role: true, displayName: true } },
     },
