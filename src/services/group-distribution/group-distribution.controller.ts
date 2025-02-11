@@ -38,14 +38,9 @@ groupDistribution.openapi(getGroupDistributionsRoute, async (c) => {
 groupDistribution.openapi(downloadGroupDistributionRoute, async (c) => {
   const { id } = c.req.param();
   const { projectIds } = c.req.valid("json");
-  const { fileName, fileBuffer: buffer } = await getGeneratedContent(
-    id,
-    projectIds
-  );
+  const data = await getGeneratedContent(id, projectIds);
 
-  c.header("Content-Type", "application/octet-stream");
-  c.header("Content-Disposition", `attachment; filename=${fileName}`);
-  return c.body(buffer);
+  return c.json({ message: "ok", data });
 });
 
 groupDistribution.openapi(exportGeneratedTaskRoute, async (c) => {

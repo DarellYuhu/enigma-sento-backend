@@ -1,4 +1,4 @@
-import { prisma } from "@/db";
+import { minioS3, prisma } from "@/db";
 import {
   sheetSchema,
   type CreateGroupDistributionBody,
@@ -107,7 +107,7 @@ const getGeneratedContent = async (id: string, projectIds: string[]) => {
   if (!groupDistribution)
     throw new HTTPException(404, { message: "Group distribution not found" });
 
-  const basePath = "./tmp/download";
+  const basePath = `${process.cwd()}/tmp/download`;
   await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
 
   await Promise.all(
@@ -121,19 +121,20 @@ const getGeneratedContent = async (id: string, projectIds: string[]) => {
       );
     })
   );
-  await Bun.$`tar -czf ${basePath}/${groupDistribution.code}.tar.gz -C ${basePath} ${groupDistribution.code}`;
+  const filename = `${groupDistribution.code}_${format(
+    new Date(),
+    "yyyy-MM-dd"
+  )}.tar.gz`;
+  const path = `${basePath}/${filename}`;
+  await Bun.$`tar -czf ${path} -C ${basePath} ${groupDistribution.code}`;
+  const file = Bun.file(`${path}`);
+  await minioS3.write(filename, await file.arrayBuffer(), { bucket: "tmp" });
+  await Bun.$`rm -rf ${basePath}/`;
 
-  const fileBuffer = await Bun.file(
-    `${basePath}/${groupDistribution.code}.tar.gz`
-  ).arrayBuffer();
-
-  return {
-    fileBuffer,
-    fileName: `${groupDistribution.code}_${format(
-      new Date(),
-      "yyyy-MM-dd"
-    )}.tar.gz`,
-  };
+  return minioS3.presign(filename, {
+    bucket: "tmp",
+    method: "GET",
+  });
 };
 
 const exportGeneratedTask = async (taskId: number) => {

@@ -161,6 +161,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /app/dist ./dist
 COPY --from=prerelease /app/package.json .
 COPY --from=prerelease /app/scripts ./scripts
+COPY --from=prerelease /app/fonts ./fonts
 
 RUN python --version
 RUN python -m ensurepip --default-pip
