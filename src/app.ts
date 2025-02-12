@@ -7,6 +7,7 @@ import {
   contentDistribution,
   groupDistribution,
   project,
+  storage,
   story,
   user,
   workgroup,
@@ -32,6 +33,7 @@ app.route("", contentDistribution);
 app.route("", groupDistribution);
 app.route("", project);
 app.route("", story);
+app.route("", storage);
 app.route("", user);
 app.route("", workgroup);
 app.route("", workgroupUser);

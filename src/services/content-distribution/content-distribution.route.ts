@@ -27,7 +27,7 @@ const postGeneratedContentRoute = createRoute({
   path: "/stories/{id}/content-distribution",
   request: {
     body: {
-      content: { "multipart/form-data": { schema: postGeneratedContentBody } },
+      content: { "application/json": { schema: postGeneratedContentBody } },
     },
   },
   responses: {

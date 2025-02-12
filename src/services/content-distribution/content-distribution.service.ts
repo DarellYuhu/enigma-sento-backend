@@ -2,7 +2,6 @@ import { minioS3, prisma } from "@/db";
 import type { Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 import { shuffle } from "lodash";
-import { getDownloadUrl, postFileToMinio } from "../storage/storage.service";
 import { config } from "@/config";
 
 const generateContentDistribution = async (projectId: string) => {
@@ -119,7 +118,7 @@ const generateContentDistribution = async (projectId: string) => {
   return res[1];
 };
 
-const postGeneratedContent = async (storyId: string, files: File[]) => {
+const postGeneratedContent = async (storyId: string, files: string[]) => {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
     include: { ContentDistribution: { include: { GroupDistribution: true } } },
@@ -141,29 +140,20 @@ const postGeneratedContent = async (storyId: string, files: File[]) => {
       const texts = story.captions
         .slice(offset, content.GroupDistribution.amontOfTroops + offset)
         .map((item) => item + " " + story.hashtags);
+      offset += content.GroupDistribution.amontOfTroops;
+      console.log("huhi", filesPayload);
       const captions = Buffer.from(texts.join("\n"), "utf-8");
-      // await minio.putObject(
-      //   "generated-content",
-      //   content.path + "/captions.txt",
-      //   captions,
-      //   captions.byteLength,
-      //   {
-      //     "Content-Type": "text/plain",
-      //   }
-      // );
       await minioS3.write(`${content.path}/captions.txt`, captions, {
         type: "text/plain",
         bucket: "generated-content",
       });
-      offset += content.GroupDistribution.amontOfTroops;
       await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${content.path}`;
       await Promise.all(
-        filesPayload.map((file) =>
-          postFileToMinio(file, content.path, "generated-content")
+        filesPayload.map(
+          async (file) =>
+            await Bun.$`${config.MINIO_CLIENT_COMMAND} mv "myminio/tmp/${file}" "myminio/generated-content/${content.path}/${file}"`
         )
       );
-      const file = await getDownloadUrl(content.path);
-      return { ...content, file };
     })
   );
   const res = await prisma.$transaction([

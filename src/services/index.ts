@@ -7,7 +7,9 @@ import project from "./project/project.controller";
 import story from "./story/story.controller";
 import contentDistribution from "./content-distribution/content-distribution.controller";
 import asset from "./asset/asset.controller";
+import storage from "./storage/storage.controller";
 export {
+  storage,
   auth,
   user,
   story,

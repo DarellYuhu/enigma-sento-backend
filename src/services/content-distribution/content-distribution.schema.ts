@@ -15,7 +15,7 @@ const generateContentDistributionResponse = z.object({
 
 const postGeneratedContentBody = z.object({
   storyId: z.string().trim().min(1, "Required"),
-  files: z.array(z.instanceof(File)).min(1, "Required"),
+  files: z.array(z.string()).min(1, "Required"),
 });
 
 export { generateContentDistributionResponse, postGeneratedContentBody };
