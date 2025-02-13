@@ -38,12 +38,12 @@ services:
     volumes:
       - mongo-dev-data:/data/db
 
-  # mongo-express:
-  #   image: mongo-express
-  #   ports:
-  #     - 8081:2001
-  #   env_file:
-  #     - .env.development
+  mongo-express:
+    image: mongo-express
+    ports:
+      - 8081:2001
+    env_file:
+      - .env.development
 
   redis-dev:
     image: bitnami/redis
