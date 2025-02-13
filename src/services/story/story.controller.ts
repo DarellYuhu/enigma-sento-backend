@@ -5,8 +5,6 @@ import {
   generateContentRoute,
   updateStoryRoute,
 } from "./story.route";
-import { dataConfigType1 } from "./story.schema";
-import { HTTPException } from "hono/http-exception";
 import {
   createStory,
   deleteStory,
@@ -17,28 +15,8 @@ import {
 const story = new OpenAPIHono();
 
 story.openapi(createStoryRoute, async (c) => {
-  const { images, ...payload } = c.req.valid("form");
-  let jsonConfig: any = null;
-  let imagesPayload: File[] = [];
-  if (payload.type === "SYSTEM_GENERATE") {
-    const {
-      success,
-      data: config,
-      error,
-    } = dataConfigType1.safeParse(JSON.parse(payload.data as string));
-    if (!Array.isArray(images)) imagesPayload.push(images as File);
-    else imagesPayload = images as File[];
-    if (!success)
-      throw new HTTPException(400, {
-        message: error.message,
-      });
-    jsonConfig = config;
-  }
-  const data = await createStory({
-    ...payload,
-    data: jsonConfig,
-    images: imagesPayload,
-  });
+  const payload = c.req.valid("json");
+  const data = await createStory(payload);
   return c.json({
     message: "Story created successfully",
     data,

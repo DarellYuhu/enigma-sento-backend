@@ -1,52 +1,38 @@
 import { minioS3, prisma } from "@/db";
-import type { CreateStoryBody, DataConfigType1 } from "./story.schema";
+import type { DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
 import { getDownloadUrl } from "@/services/storage/storage.service";
 import Music from "@/services/asset/entities/music";
 import { queue } from "@/lib/generator";
+import type { IStory } from "./entities/story";
+import Story from "./entities/story";
+import mongoose from "mongoose";
+import { config } from "@/config";
 
-type Data = Omit<CreateStoryBody, "data" | "images"> & {
-  data?: DataConfigType1;
-  images: File[];
-};
-
-const createStory = async ({ data: jsonPayload, images, ...payload }: Data) => {
-  const project = await prisma.project.findUnique({
-    where: { id: payload.projectId },
+const createStory = async ({ data, ...payload }: IStory) => {
+  await prisma.project.findUniqueOrThrow({ where: { id: payload.projectId } });
+  const id = new mongoose.Types.ObjectId();
+  await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+  const section = data
+    ? await Promise.all(
+        data.map(async (item) => {
+          const images = await Promise.all(
+            item.images.map(async (path) => {
+              const newPath = `assets/stories/${id}/${path.name}`;
+              await Bun.$`${config.MINIO_CLIENT_COMMAND} mv myminio/tmp/${path.path} myminio/${newPath}`;
+              return { path: newPath, name: path.name };
+            })
+          );
+          return { ...item, images };
+        })
+      )
+    : undefined;
+  const doc = new Story({ _id: id, ...payload, data: section });
+  const result = await doc.save();
+  await prisma.story.create({
+    data: { id: result._id.toString(), projectId: payload.projectId },
   });
-  if (!project) throw new HTTPException(404, { message: "Project not found" });
-  if (payload.type === "USER_GENERATE")
-    return await prisma.story.create({
-      data: { ...payload },
-    });
-  const urls = await Promise.all(
-    images!.map(async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      const fileName = `${project.name}/assets/${Date.now()}_${file.name}`;
-      await minioS3.write(fileName, arrayBuffer, {
-        bucket: "images",
-        type: file.type,
-      });
-      // await minio.putObject(
-      //   "images",
-      //   fileName,
-      //   Buffer.from(arrayBuffer),
-      //   file.size,
-      //   {
-      //     "Content-Type": file.type,
-      //   }
-      // );
-      return [file.name, fileName];
-    })
-  );
-  const urlRecord: Record<string, string> = Object.fromEntries(urls);
-  const jsonPayloadNormalized = jsonPayload!.map(({ images, ...item }) => ({
-    ...item,
-    images: images.map((image) => urlRecord[image]),
-  }));
-  return await prisma.story.create({
-    data: { ...payload, data: jsonPayloadNormalized },
-  });
+  return await Story.findById(result._id).lean();
 };
 
 type UpdateStoryBody = {

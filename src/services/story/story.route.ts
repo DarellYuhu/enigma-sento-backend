@@ -1,22 +1,19 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import {
-  createStoryBody,
-  createStoryResponse,
-  updateStoryBody,
-} from "./story.schema";
+import { createStoryResponse, updateStoryBody } from "./story.schema";
 import { rbacMiddleware } from "@/middlewares/rbacMiddleware";
 import { config } from "@/config";
 import { jwt } from "hono/jwt";
+import { storyZod } from "./entities/story";
 
-const createStoryRoute = createRoute({
+export const createStoryRoute = createRoute({
   tags: ["Story"],
   method: "post",
   path: "/stories",
   request: {
     body: {
       content: {
-        "multipart/form-data": {
-          schema: createStoryBody,
+        "application/json": {
+          schema: storyZod,
         },
       },
     },
@@ -26,14 +23,17 @@ const createStoryRoute = createRoute({
       description: "CREATED",
       content: {
         "application/json": {
-          schema: createStoryResponse,
+          schema: z.object({
+            message: z.string(),
+            data: storyZod,
+          }),
         },
       },
     },
   },
 });
 
-const updateStoryRoute = createRoute({
+export const updateStoryRoute = createRoute({
   tags: ["Story"],
   method: "patch",
   path: "/stories/{id}",
@@ -60,7 +60,7 @@ const updateStoryRoute = createRoute({
   },
 });
 
-const generateContentRoute = createRoute({
+export const generateContentRoute = createRoute({
   method: "patch",
   path: "/stories/{id}/contents",
   request: {
@@ -76,7 +76,7 @@ const generateContentRoute = createRoute({
   },
 });
 
-const deleteStoryRoute = createRoute({
+export const deleteStoryRoute = createRoute({
   tags: ["Story"],
   method: "delete",
   path: "/stories/{id}",
@@ -94,10 +94,3 @@ const deleteStoryRoute = createRoute({
     },
   },
 });
-
-export {
-  createStoryRoute,
-  updateStoryRoute,
-  generateContentRoute,
-  deleteStoryRoute,
-};

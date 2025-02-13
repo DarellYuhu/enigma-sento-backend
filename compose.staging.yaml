@@ -7,7 +7,7 @@ services:
     ports:
       - "3002:3002"
     environment:
-      - NEXTAUTH_URL=http://165.22.247.113:3002
+      - NEXTAUTH_URL=http://172.104.52.10:3002
 
   backend:
     image: enigma-sento-backend-staging:latest
