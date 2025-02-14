@@ -1,6 +1,20 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { addFontsRoute, addMusicsRoute, getAllMusicRoute } from "./asset.route";
-import { addFonts, addMusics, getAllMusic } from "./asset.service";
+import {
+  addColorsRoute,
+  addFontsRoute,
+  addMusicsRoute,
+  getAllFontsRoute,
+  getAllMusicRoute,
+  getColorsRoute,
+} from "./asset.route";
+import {
+  addColors,
+  addFonts,
+  addMusics,
+  getAllFonts,
+  getAllMusic,
+  getColors,
+} from "./asset.service";
 
 const asset = new OpenAPIHono();
 
@@ -21,4 +35,19 @@ asset.openapi(addFontsRoute, async (c) => {
   return c.json({ message: "ok", data: result });
 });
 
+asset.openapi(getAllFontsRoute, async (c) => {
+  const data = await getAllFonts();
+  return c.json({ message: "ok", data });
+});
+
+asset.openapi(addColorsRoute, async (c) => {
+  const { file } = c.req.valid("form");
+  await addColors(file as File);
+  return c.json({ message: "ok" });
+});
+
+asset.openapi(getColorsRoute, async (c) => {
+  const data = await getColors();
+  return c.json({ message: "ok", data });
+});
 export default asset;

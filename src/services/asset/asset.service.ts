@@ -4,6 +4,9 @@ import Music from "./entities/music";
 import { Font, type CreateFontPayload } from "./entities/font";
 import { config } from "@/config";
 import { HTTPException } from "hono/http-exception";
+import * as xlsx from "xlsx";
+import { z } from "zod";
+import { Color, colorZod } from "./entities/color";
 
 export const addMusics = async (files: File[]) => {
   await Promise.all(
@@ -57,4 +60,21 @@ export const getAllFonts = async () => {
     url: minioS3.presign(item.path, { method: "GET" }),
   }));
   return fonts;
+};
+
+export const addColors = async (file: File) => {
+  const workbook = xlsx.read(await file.arrayBuffer(), { type: "buffer" });
+  const sheetName = workbook.SheetNames[0];
+  const json = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+  const valid = await z
+    .array(colorZod)
+    .parseAsync(json)
+    .catch(() => {
+      throw new HTTPException(400, { message: "Invalid data!" });
+    });
+  await Color.insertMany(valid);
+};
+
+export const getColors = () => {
+  return Color.find({}).lean();
 };

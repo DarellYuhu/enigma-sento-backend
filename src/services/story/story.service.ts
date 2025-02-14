@@ -144,7 +144,6 @@ const updateSection = async (
       })
     );
   }
-  console.log("huhi");
   if (data.newImages) {
     const newImages = await Promise.all(
       data.newImages.map(async (path) => {
