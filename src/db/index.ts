@@ -1,5 +1,6 @@
 import { config } from "@/config";
 import { Font } from "@/services/asset/entities/font";
+import Story from "@/services/story/entities/story";
 import { PrismaClient } from "@prisma/client";
 import { Client } from "minio";
 import mongoose from "mongoose";
@@ -21,6 +22,7 @@ const minioS3 = new Bun.S3Client({
 const connectMongo = async () => {
   try {
     await mongoose.connect(config.MONGO_URI, { dbName: "enigma-sento" });
+    await Story.createCollection();
     await Font.createIndexes();
   } catch (error) {
     console.error("MongoDB connection error: ", error);

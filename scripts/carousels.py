@@ -11,8 +11,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import cv2
 from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_audioclips
 
-FONT_DIR = "./fonts/"
-FONT = FONT_DIR + random.choice(os.listdir(FONT_DIR))
+FONT_DEFAULT = "./scripts/arial.ttf"
 WIDTH = 1200
 
 def zoom(image):
@@ -91,7 +90,7 @@ def load_image(path):
     
     return r_img
 
-def create_section(section, text_modes):
+def create_section(section, font_path, text_modes):
     
     images_path = section["images_path"]
     texts = section["texts"]
@@ -114,12 +113,12 @@ def create_section(section, text_modes):
         font_size = random.randint(font_size_small, font_size_big)
         
         text = "" if not(len(texts)) else random.choice(texts)
-        text_font = ImageFont.truetype(font = FONT, size = font_size)
+        text_font = ImageFont.truetype(font = font_path, size = font_size)
         text_position = pos.get(section["textPosition"])
         text_color = section.get("textColor", "white")
         text_bg_color = section.get("textBgColor", "black")
         text_stroke_width = random.randint(5, 8)
-        text_stroke_color = section.get("textStColor", "black")
+        text_stroke_color = section.get("textStroke", "black")
 
         if text != "":
 
@@ -162,7 +161,7 @@ def create_section(section, text_modes):
         
     return elements
 
-def create_carousels(sections, num_contents):
+def create_carousels(sections, font_path, num_contents):
     
     text_modes = [random.choice(["rectangle", "stroke"]) for i in range(num_contents)]
 
@@ -170,7 +169,7 @@ def create_carousels(sections, num_contents):
     
     section_elements = []
     for i in range(len(sections)):
-        elements = create_section(sections[i], text_modes)
+        elements = create_section(sections[i], font_path, text_modes)
         section_elements.append(elements)
         
     for i in range(num_contents):
@@ -223,7 +222,7 @@ def create_video_with_sound(sounds_path, video_path, output_path):
 
 class Generator():
     
-    def __init__(self, base_path, target, sections, captions, hashtags, sounds):
+    def __init__(self, base_path, target, sections, captions, hashtags, sounds, font):
         
         self.base_path = base_path
         self.target = target
@@ -232,6 +231,8 @@ class Generator():
         self.hashtags = hashtags
         self.sounds = sounds
         self.sounds_path = []
+        self.font = font
+        self.font_path = "/".join([self.base_path, "resources", "font.ttf"])
         self.distributed = []
         
         for s in sections:
@@ -254,6 +255,15 @@ class Generator():
                     os.makedirs(paths[j])
                 except:
                     pass
+
+    def download_font(self):
+        r = requests.get(self.font)
+        print(r.status_code)
+        if r.status_code == 200:
+            with open(self.font_path, 'wb') as f:
+                f.write(r.content)
+        else:
+            self.font_path = FONT_DEFAULT
         
     def download_images(self):
     
@@ -286,7 +296,7 @@ class Generator():
             temp_path = "/".join([self.base_path, "tmp", self.target[i]["path"]])
             target_path = "/".join([self.base_path, self.target[i]["path"]])
             num_contents = self.target[i]["amountOfTroops"]
-            carousels = create_carousels(self.sections, num_contents)
+            carousels = create_carousels(self.sections, self.font_path, num_contents)
 
             print(self.target[i], num_contents)
             
@@ -326,6 +336,7 @@ class Generator():
     def run(self):
         
         self.create_directories()
+        self.download_font()
         self.download_images()
         self.download_sounds()
         self.distribute()
@@ -343,6 +354,7 @@ if __name__ == "__main__":
     hashtags = config["hashtags"]
     sections = config["sections"]
     sounds = config["sounds"]
+    font = config["font"]
 
-    generator = Generator(base_path, target, sections, captions, hashtags, sounds)
+    generator = Generator(base_path, target, sections, captions, hashtags, sounds, font)
     generator.run()

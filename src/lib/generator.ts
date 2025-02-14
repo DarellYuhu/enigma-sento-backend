@@ -25,7 +25,8 @@ worker.on("stalled", () => {
   console.log("stalled");
 });
 
-worker.on("failed", async (job) => {
+worker.on("failed", async (job, err) => {
+  console.log(err);
   const data = job?.data;
   await Story.findByIdAndUpdate(data?.storyId, { generatorStatus: "ERROR" });
   await Bun.$`rm -rf ${job?.data.basePath}`;

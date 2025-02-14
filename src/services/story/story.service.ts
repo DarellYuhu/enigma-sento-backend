@@ -6,6 +6,8 @@ import type { IStory } from "./entities/story";
 import Story from "./entities/story";
 import mongoose from "mongoose";
 import { config } from "@/config";
+import { getAllFonts } from "../asset/asset.service";
+import { random } from "lodash";
 
 const createStory = async ({ data, ...payload }: IStory) => {
   await prisma.project.findUniqueOrThrow({ where: { id: payload.projectId } });
@@ -60,6 +62,7 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
     ? (await Music.find({})).map(({ path }) => path)
     : [];
   const sections = story.data;
+  const fonts = (await getAllFonts()).map((item) => item.url);
   const ContentDistribution = await prisma.contentDistribution.findMany({
     where: { storyId },
     include: { GroupDistribution: true },
@@ -78,6 +81,7 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
         ),
       }))
     ),
+    font: fonts[random(fonts.length - 1)],
     captions: story.captions,
     hashtags: story.hashtags ?? "",
     sounds: musicPath.map((path) =>

@@ -50,3 +50,11 @@ export const addFonts = async ({ data }: CreateFontPayload) => {
   });
   return result.map(({ name, path, _id }) => ({ name, path, _id }));
 };
+
+export const getAllFonts = async () => {
+  const fonts = (await Font.find({}).lean()).map((item) => ({
+    ...item,
+    url: minioS3.presign(item.path, { method: "GET" }),
+  }));
+  return fonts;
+};
