@@ -3,12 +3,14 @@ import {
   createStoryRoute,
   deleteStoryRoute,
   generateContentRoute,
+  updateSectionRoute,
   updateStoryRoute,
 } from "./story.route";
 import {
   createStory,
   deleteStory,
   generateContent,
+  updateSection,
   updateStory,
 } from "./story.service";
 
@@ -44,6 +46,13 @@ story.openapi(deleteStoryRoute, async (c) => {
   const { id } = c.req.param();
   await deleteStory(id);
   return c.json({ message: "Story deleted" });
+});
+
+story.openapi(updateSectionRoute, async (c) => {
+  const payload = c.req.valid("json");
+  const { id, sectionId } = c.req.valid("param");
+  const data = await updateSection(id, sectionId, payload);
+  return c.json({ message: "ok", data });
 });
 
 export default story;

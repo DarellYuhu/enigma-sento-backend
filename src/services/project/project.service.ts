@@ -1,8 +1,7 @@
 import { prisma } from "@/db";
 import type { CreateProjectBody } from "./project.schema";
 import { HTTPException } from "hono/http-exception";
-import type { DataConfigType1 } from "../story/story.schema";
-import { getDownloadUrl } from "../storage/storage.service";
+import { getStories } from "../story/story.service";
 
 const createProject = async (data: CreateProjectBody, userId: string) => {
   const { name, workgroupId } = data;
@@ -34,23 +33,7 @@ const getProjects = async (workgroupId: string, userId: string) => {
   const response = await Promise.all(
     projects.map(async ({ Story, ...item }) => ({
       ...item,
-      Story: await Promise.all(
-        Story.map(async (storyItem) => ({
-          ...storyItem,
-          data: storyItem.data
-            ? await Promise.all(
-                (storyItem.data as DataConfigType1).map(
-                  async (dataItem: DataConfigType1["0"]) => ({
-                    ...dataItem,
-                    images: await Promise.all(
-                      dataItem.images.map((image) => getDownloadUrl(image))
-                    ),
-                  })
-                )
-              )
-            : null,
-        }))
-      ),
+      Story: await getStories(item.id),
     }))
   );
 

@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { createStoryResponse, updateStoryBody } from "./story.schema";
+import { updateStoryBody } from "./story.schema";
 import { rbacMiddleware } from "@/middlewares/rbacMiddleware";
 import { config } from "@/config";
 import { jwt } from "hono/jwt";
@@ -25,7 +25,6 @@ export const createStoryRoute = createRoute({
         "application/json": {
           schema: z.object({
             message: z.string(),
-            data: storyZod,
           }),
         },
       },
@@ -51,11 +50,6 @@ export const updateStoryRoute = createRoute({
   responses: {
     200: {
       description: "UPDATED",
-      content: {
-        "application/json": {
-          schema: createStoryResponse,
-        },
-      },
     },
   },
 });
@@ -91,6 +85,59 @@ export const deleteStoryRoute = createRoute({
   responses: {
     204: {
       description: "NO CONTENT",
+    },
+  },
+});
+
+export const updateSectionRoute = createRoute({
+  tags: ["Story"],
+  path: "/stories/{id}/sections/{sectionId}",
+  method: "patch",
+  request: {
+    params: z.object({ id: z.string(), sectionId: z.string() }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            texts: z.array(z.string()).optional(),
+            textColor: z.string().optional(),
+            textBgColor: z.string().optional(),
+            textStroke: z.string().optional(),
+            textPosition: z.enum(["random", "middle", "bottom"]).optional(),
+            images: z
+              .array(
+                z.object({
+                  path: z.string(),
+                  name: z.string(),
+                  _id: z.string(),
+                })
+              )
+              .optional(),
+            deletedImages: z
+              .array(
+                z.object({
+                  path: z.string(),
+                  name: z.string(),
+                  _id: z.string(),
+                })
+              )
+              .optional(),
+            newImages: z
+              .array(
+                z.object({
+                  path: z.string(),
+                  name: z.string(),
+                })
+              )
+              .optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "OK",
     },
   },
 });

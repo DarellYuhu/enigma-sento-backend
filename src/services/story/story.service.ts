@@ -1,7 +1,5 @@
 import { minioS3, prisma } from "@/db";
-import type { DataConfigType1 } from "./story.schema";
 import { HTTPException } from "hono/http-exception";
-import { getDownloadUrl } from "@/services/storage/storage.service";
 import Music from "@/services/asset/entities/music";
 import { queue } from "@/lib/generator";
 import type { IStory } from "./entities/story";
@@ -18,8 +16,8 @@ const createStory = async ({ data, ...payload }: IStory) => {
         data.map(async (item) => {
           const images = await Promise.all(
             item.images.map(async (path) => {
-              const newPath = `assets/stories/${id}/${path.name}`;
-              await Bun.$`${config.MINIO_CLIENT_COMMAND} mv myminio/tmp/${path.path} myminio/${newPath}`;
+              const newPath = `stories/${id}/${path.name}`;
+              await Bun.$`${config.MINIO_CLIENT_COMMAND} mv myminio/tmp/${path.path} myminio/assets/${newPath}`;
               return { path: newPath, name: path.name };
             })
           );
@@ -35,54 +33,48 @@ const createStory = async ({ data, ...payload }: IStory) => {
   return await Story.findById(result._id).lean();
 };
 
-type UpdateStoryBody = {
-  captions: string[];
-  hashtags: string;
-};
-const updateStory = async (data: Partial<UpdateStoryBody>, id: string) => {
-  const story = await prisma.story.findUnique({
-    where: { id },
-    select: { contentPerStory: true },
-  });
+const updateStory = async (data: Partial<IStory>, id: string) => {
+  const story = await Story.findById(id);
   if (!story) throw new HTTPException(404, { message: "Story not found" });
   if (
     data.captions &&
     data.captions.length < (story.contentPerStory ?? Infinity)
   )
     throw new HTTPException(400, { message: "Not enough captions" });
-  return prisma.story.update({ where: { id }, data });
+  return Story.findByIdAndUpdate(id, data, { new: true }).lean();
 };
 
 const generateContent = async (storyId: string, withMusic: boolean = false) => {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    include: { ContentDistribution: { include: { GroupDistribution: true } } },
-  });
+  const story = await Story.findById(storyId).lean();
   if (!story) throw new HTTPException(404, { message: "Story not found" });
-  // if (story.generatorStatus === "RUNNING")
-  //   throw new HTTPException(400, { message: "Story is being generated" });
   if (
     story.type !== "SYSTEM_GENERATE" ||
     !story.data ||
-    story.captions.length < (story.contentPerStory ?? -1)
+    story.captions?.length! < (story.contentPerStory ?? -1)
   )
     throw new HTTPException(400, {
       message: `You have to provide at least ${story.contentPerStory} captions`,
     });
-  await prisma.story.update({
-    where: { id: storyId },
-    data: { generatorStatus: "RUNNING" },
-  });
+  await Story.findByIdAndUpdate(storyId, { generatorStatus: "RUNNING" });
   const musicPath = withMusic
     ? (await Music.find({})).map(({ path }) => path)
     : [];
-  const sections = story.data as DataConfigType1;
+  const sections = story.data;
+  const ContentDistribution = await prisma.contentDistribution.findMany({
+    where: { storyId },
+    include: { GroupDistribution: true },
+  });
   const config = {
     sections: await Promise.all(
       sections.map(async (item) => ({
         ...item,
         images: await Promise.all(
-          item.images.map((imagePath) => getDownloadUrl(imagePath))
+          item.images.map((imagePath) =>
+            minioS3.presign(imagePath.path, {
+              bucket: "assets",
+              method: "GET",
+            })
+          )
         ),
       }))
     ),
@@ -91,7 +83,7 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
     sounds: musicPath.map((path) =>
       minioS3.presign(path, { bucket: "assets", method: "GET" })
     ),
-    groupDistribution: story.ContentDistribution.map((item) => ({
+    groupDistribution: ContentDistribution.map((item) => ({
       amountOfTroops: item.GroupDistribution.amontOfTroops,
       path: item.path,
     })),
@@ -103,8 +95,81 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
   await queue.add(storyId, { ...config, storyId });
 };
 
-const deleteStory = (id: string) => {
-  return prisma.story.delete({ where: { id } });
+const getStories = async (projectId: string) => {
+  const stories = await Story.find({ projectId })
+    .sort({ createdAt: "desc" })
+    .lean();
+  const normalized = stories.map((item) => ({
+    ...item,
+    data: item.data
+      ? item.data.map((item) => ({
+          ...item,
+          images: item.images.map((image) => ({
+            ...image,
+            url: minioS3.presign(image.path, {
+              bucket: "assets",
+              method: "GET",
+            }),
+          })),
+        }))
+      : undefined,
+  }));
+  return normalized;
 };
 
-export { createStory, deleteStory, updateStory, generateContent };
+const deleteStory = async (id: string) => {
+  await Story.deleteOne({ _id: id });
+  return await prisma.story.delete({ where: { id } });
+};
+
+const updateSection = async (
+  storyId: string,
+  sectionId: string,
+  data: Partial<
+    NonNullable<IStory["data"]>["0"] & {
+      newImages: { path: string; name: string }[];
+      deletedImages: { path: string; name: string; _id: string }[];
+    }
+  >
+) => {
+  await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+  if (data.deletedImages) {
+    await Promise.all(
+      data.deletedImages.map(async (image) => {
+        await minioS3.delete(image.path, { bucket: "assets" });
+      })
+    );
+  }
+  console.log("huhi");
+  if (data.newImages) {
+    const newImages = await Promise.all(
+      data.newImages.map(async (path) => {
+        const newPath = `stories/${storyId}/${path.name}`;
+        await Bun.$`${config.MINIO_CLIENT_COMMAND} mv myminio/tmp/${path.path} myminio/assets/${newPath}`;
+        return { path: newPath, name: path.name };
+      })
+    );
+    if (!data.images) data.images = [];
+    data.images.push(...newImages);
+  }
+
+  const updates = Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [`data.$.${key}`, value])
+  );
+
+  const section = await Story.findOneAndUpdate(
+    { _id: storyId, "data._id": sectionId },
+    { $set: updates },
+    { new: true }
+  );
+  return section;
+};
+
+export {
+  createStory,
+  deleteStory,
+  updateStory,
+  generateContent,
+  getStories,
+  updateSection,
+};

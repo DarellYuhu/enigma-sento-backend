@@ -100,17 +100,9 @@ model Project {
 
 model Story {
   id                  String                @id @default(uuid())
-  section             Int?
-  // generate by algorithm
-  contentPerStory     Int?
-  type                StoryType?
   projectId           String
   Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  data                Json?
-  captions            String[]
-  hashtags            String?
   ContentDistribution ContentDistribution[]
-  generatorStatus     GeneratorStatus?      @default(NOT_GENERATE)
 }
 
 model ContentDistribution {

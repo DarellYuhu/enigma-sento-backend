@@ -3,9 +3,10 @@ import type { Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 import { shuffle } from "lodash";
 import { config } from "@/config";
+import Story from "../story/entities/story";
 
 const generateContentDistribution = async (projectId: string) => {
-  const project = await prisma.project.findUnique({
+  const project = await prisma.project.findFirstOrThrow({
     where: { id: projectId },
     include: {
       Story: true,
@@ -40,7 +41,7 @@ const generateContentDistribution = async (projectId: string) => {
     throw new HTTPException(400, { message: "Not enough stories or session" });
 
   const {
-    Story,
+    Story: prismaStory,
     workgroupId,
     Workgroup: {
       TaskHistory: [{ WorkgroupUserTask }],
@@ -50,7 +51,7 @@ const generateContentDistribution = async (projectId: string) => {
 
   let storyIndex = 0;
   const map: Map<string, number> = new Map();
-  const randomizedStory = shuffle(Story);
+  const randomizedStory = shuffle(prismaStory);
 
   const storyDistribution = WorkgroupUserTask.map((task) => {
     return Array.from({ length: session }).map(
@@ -87,12 +88,16 @@ const generateContentDistribution = async (projectId: string) => {
 
   const payload = storyDistribution.flat();
 
-  const storyTransaction = Array.from(map, ([key, value]) => {
-    return prisma.story.update({
-      where: { id: key },
-      data: { contentPerStory: value },
-    });
-  });
+  await Promise.all(
+    Array.from(map, ([key, value]) => {
+      return Story.updateOne(
+        {
+          _id: key,
+        },
+        { contentPerStory: value }
+      );
+    })
+  );
 
   const deletePrevContentDistTransaction =
     prisma.contentDistribution.deleteMany({ where: { Story: { projectId } } });
@@ -112,36 +117,38 @@ const generateContentDistribution = async (projectId: string) => {
     deletePrevContentDistTransaction,
     contentDistributionTransaction,
     updateProjectStatus,
-    ...storyTransaction,
   ]);
 
   return res[1];
 };
 
 const postGeneratedContent = async (storyId: string, files: string[]) => {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    include: { ContentDistribution: { include: { GroupDistribution: true } } },
-  });
+  const story = await Story.findById(storyId).lean();
   if (!story) throw new HTTPException(404, { message: "Story not found" });
   if (
     story.contentPerStory !== files.length ||
-    story.captions.length < story.contentPerStory
+    story.captions?.length! < story.contentPerStory
   )
     throw new HTTPException(400, { message: "Not enough files or captions" });
   let offset = 0;
   await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
+  const ContentDistribution = await prisma.contentDistribution.findMany({
+    where: { storyId },
+    include: { GroupDistribution: true },
+  });
   await Promise.all(
-    story.ContentDistribution.map(async (content) => {
+    ContentDistribution.map(async (content) => {
       const filesPayload = files.slice(
         offset,
         content.GroupDistribution.amontOfTroops + offset
       );
-      const texts = story.captions
-        .slice(offset, content.GroupDistribution.amontOfTroops + offset)
+      const texts = story
+        .captions!.slice(
+          offset,
+          content.GroupDistribution.amontOfTroops + offset
+        )
         .map((item) => item + " " + story.hashtags);
       offset += content.GroupDistribution.amontOfTroops;
-      console.log("huhi", filesPayload);
       const captions = Buffer.from(texts.join("\n"), "utf-8");
       await minioS3.write(`${content.path}/captions.txt`, captions, {
         type: "text/plain",
@@ -156,16 +163,10 @@ const postGeneratedContent = async (storyId: string, files: string[]) => {
       );
     })
   );
-  const res = await prisma.$transaction([
-    prisma.contentDistribution.findMany({
-      where: { Story: { id: storyId } },
-    }),
-    prisma.story.update({
-      where: { id: storyId },
-      data: { generatorStatus: "FINISHED" },
-    }),
-  ]);
-  return res[0];
+  const res = await Story.findByIdAndUpdate(storyId, {
+    generatorStatus: "FINISHED",
+  }).lean();
+  return res;
 };
 
 export { generateContentDistribution, postGeneratedContent };

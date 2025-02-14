@@ -1,5 +1,6 @@
 import { config } from "@/config";
-import { minioS3, prisma } from "@/db";
+import { minioS3 } from "@/db";
+import Story from "@/services/story/entities/story";
 import type { DataConfigType1 } from "@/services/story/story.schema";
 import { Queue, Worker, type ConnectionOptions } from "bullmq";
 
@@ -26,10 +27,7 @@ worker.on("stalled", () => {
 
 worker.on("failed", async (job) => {
   const data = job?.data;
-  await prisma.story.update({
-    where: { id: data?.storyId },
-    data: { generatorStatus: "ERROR" },
-  });
+  await Story.findByIdAndUpdate(data?.storyId, { generatorStatus: "ERROR" });
   await Bun.$`rm -rf ${job?.data.basePath}`;
 });
 
@@ -59,10 +57,7 @@ async function generator(config: Config, storyId: string) {
   ).then(() => {
     console.log("Upload finished");
   });
-  await prisma.story.update({
-    where: { id: storyId },
-    data: { generatorStatus: "FINISHED" },
-  });
+  await Story.findByIdAndUpdate(storyId, { generatorStatus: "FINISHED" });
   await Bun.$`rm -rf ${config.basePath}`;
 }
 
