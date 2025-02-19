@@ -86,14 +86,17 @@ model WorkgroupUserTask {
 }
 
 model Project {
-  id              String        @id @default(uuid())
+  id              String         @id @default(uuid())
   name            String
-  status          Boolean       @default(false)
+  status          Boolean        @default(false)
   workgroupId     String
-  Workgroup       Workgroup     @relation(fields: [workgroupId], references: [id])
+  Workgroup       Workgroup      @relation(fields: [workgroupId], references: [id])
   workgroupUserId Int
-  WorkgroupUser   WorkgroupUser @relation(fields: [workgroupUserId], references: [id])
+  WorkgroupUser   WorkgroupUser  @relation(fields: [workgroupUserId], references: [id])
   Story           Story[]
+  allocationType  AllocationType
+  captions        String[]
+  hashtags        String?
 
   @@unique([name, workgroupUserId])
 }
@@ -103,19 +106,33 @@ model Story {
   projectId           String
   Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   ContentDistribution ContentDistribution[]
+  DistributionStory   DistributionStory[]
+}
+
+model DistributionStory {
+  contentDistributionId String
+  ContentDistribution   ContentDistribution @relation(fields: [contentDistributionId], references: [id], onDelete: Cascade)
+  storyId               String
+  Story                 Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  amountOfContents      Int
+  offset                Int
+
+  @@unique([contentDistributionId, storyId])
 }
 
 model ContentDistribution {
+  id                    String              @id @default(uuid())
   session               Int
   path                  String
   workgroupId           String
-  Workgroup             Workgroup         @relation(fields: [workgroupId], references: [id])
+  Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
   groupDistributionCode String
-  GroupDistribution     GroupDistribution @relation(fields: [groupDistributionCode], references: [id])
-  storyId               String
-  Story                 Story             @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
+  storyId               String?
+  Story                 Story?              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  DistributionStory     DistributionStory[]
 
-  @@unique([workgroupId, groupDistributionCode, storyId, session], name: "uniqueConstraint")
+  @@unique([workgroupId, groupDistributionCode, session, storyId], name: "uniqueConstraint")
 }
 
 enum Role {
@@ -134,4 +151,9 @@ enum GeneratorStatus {
 enum StoryType {
   USER_GENERATE
   SYSTEM_GENERATE
+}
+
+enum AllocationType {
+  SPECIFIC
+  GENERIC
 }

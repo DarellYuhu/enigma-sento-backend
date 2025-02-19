@@ -16,6 +16,7 @@
     "db:seed": "bunx prisma db seed",
     "db:reset": "bunx prisma migrate reset",
     "db:migrate": "bunx prisma migrate dev",
+    "db:migrate:create-only": "bunx prisma migrate dev --create-only",
     "db:deploy": "bunx prisma migrate deploy",
     "up:dev": "docker compose -f compose.dev.yaml up -d",
     "down:dev": "docker compose -f compose.dev.yaml down"

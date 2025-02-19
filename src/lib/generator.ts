@@ -21,6 +21,12 @@ export const worker = new Worker<Config & { storyId: string }>(
   { connection }
 );
 
+worker.on("completed", async (job) => {
+  const data = job?.data;
+  await Story.findByIdAndUpdate(data.storyId, { generatorStatus: "FINISHED" });
+  await Bun.$`rm -rf ${data.basePath}`;
+});
+
 worker.on("stalled", () => {
   console.log("stalled");
 });
@@ -58,8 +64,6 @@ async function generator(config: Config, storyId: string) {
   ).then(() => {
     console.log("Upload finished");
   });
-  await Story.findByIdAndUpdate(storyId, { generatorStatus: "FINISHED" });
-  await Bun.$`rm -rf ${config.basePath}`;
 }
 
 type Config = {

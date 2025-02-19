@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { getStories } from "../story/story.service";
 
 const createProject = async (data: CreateProjectBody, userId: string) => {
-  const { name, workgroupId } = data;
+  const { name, workgroupId, allocationType, captions, hashtags } = data;
   const project = await prisma.$transaction(async (db) => {
     const workgroupUser = await db.workgroupUser.findFirst({
       where: { workgroupId, userId, User: { role: "CREATOR" } },
@@ -15,7 +15,14 @@ const createProject = async (data: CreateProjectBody, userId: string) => {
     }
 
     return db.project.create({
-      data: { name, workgroupId, workgroupUserId: workgroupUser.id },
+      data: {
+        name,
+        workgroupId,
+        allocationType,
+        captions: captions?.split("\n"),
+        hashtags,
+        workgroupUserId: workgroupUser.id,
+      },
     });
   });
 

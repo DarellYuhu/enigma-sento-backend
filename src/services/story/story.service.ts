@@ -48,11 +48,15 @@ const updateStory = async (data: Partial<IStory>, id: string) => {
 
 const generateContent = async (storyId: string, withMusic: boolean = false) => {
   const story = await Story.findById(storyId).lean();
+  const project = await prisma.project.findFirstOrThrow({
+    where: { Story: { some: { id: storyId } } },
+  });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
   if (
-    story.type !== "SYSTEM_GENERATE" ||
-    !story.data ||
-    story.captions?.length! < (story.contentPerStory ?? -1)
+    ((story.type !== "SYSTEM_GENERATE" ||
+      story.captions?.length! < (story.contentPerStory ?? -1)) &&
+      project.allocationType === "SPECIFIC") ||
+    !story.data
   )
     throw new HTTPException(400, {
       message: `You have to provide at least ${story.contentPerStory} captions`,
@@ -64,8 +68,11 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
   const sections = story.data;
   const fonts = (await getAllFonts()).map((item) => item.url);
   const ContentDistribution = await prisma.contentDistribution.findMany({
-    where: { storyId },
-    include: { GroupDistribution: true },
+    where: { OR: [{ DistributionStory: { some: { storyId } } }, { storyId }] },
+    include: {
+      GroupDistribution: true,
+      DistributionStory: { where: { storyId } },
+    },
   });
   const config = {
     sections: await Promise.all(
@@ -82,15 +89,23 @@ const generateContent = async (storyId: string, withMusic: boolean = false) => {
       }))
     ),
     font: fonts[random(fonts.length - 1)],
-    captions: story.captions,
+    captions: story.captions ?? [],
     hashtags: story.hashtags ?? "",
     sounds: musicPath.map((path) =>
       minioS3.presign(path, { bucket: "assets", method: "GET" })
     ),
-    groupDistribution: ContentDistribution.map((item) => ({
-      amountOfTroops: item.GroupDistribution.amontOfTroops,
-      path: item.path,
-    })),
+    groupDistribution: ContentDistribution.map((item) => {
+      const distributionStory = item.DistributionStory.find(
+        (item) => item.storyId === storyId
+      );
+      return {
+        amountOfContents:
+          distributionStory?.amountOfContents ??
+          item.GroupDistribution.amontOfTroops,
+        path: distributionStory ? `${item.path}/SG` : item.path,
+        offset: distributionStory?.offset,
+      };
+    }),
     basePath: `${process.cwd()}/tmp/${storyId}`,
   };
 

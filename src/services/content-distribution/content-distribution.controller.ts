@@ -13,15 +13,15 @@ const contentDistribution = new OpenAPIHono();
 
 contentDistribution.openapi(generateContentDistributionRoute, async (c) => {
   const { id } = c.req.param();
-  const data = await generateContentDistribution(id);
-  return c.json({ message: "ok", data });
+  await generateContentDistribution(id);
+  return c.json({ message: "ok" });
 });
 
 contentDistribution.openapi(postGeneratedContentRoute, async (c) => {
   const { storyId, files } = c.req.valid("json");
   const random = shuffle(files);
-  const data = await postGeneratedContent(storyId, random);
-  return c.json({ message: "ok", data });
+  await postGeneratedContent(storyId, random);
+  return c.json({ message: "ok" });
 });
 
 export default contentDistribution;

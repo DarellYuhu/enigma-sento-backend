@@ -38,7 +38,9 @@ const generateContentDistribution = async (projectId: string) => {
     project.Story.length < project.Workgroup.session ||
     project.Story.length < project.Workgroup.projectStoryPerUser
   )
-    throw new HTTPException(400, { message: "Not enough stories or session" });
+    throw new HTTPException(400, {
+      message: `Not enough stories. You need at least ${project.Workgroup.projectStoryPerUser} stories`,
+    });
 
   const {
     Story: prismaStory,
@@ -53,38 +55,90 @@ const generateContentDistribution = async (projectId: string) => {
   const map: Map<string, number> = new Map();
   const randomizedStory = shuffle(prismaStory);
 
-  const storyDistribution = WorkgroupUserTask.map((task) => {
-    return Array.from({ length: session }).map(
-      (_, index): Prisma.ContentDistributionUncheckedCreateInput => {
-        const path = `${task.GroupDistribution.code}/${project.name}/${
-          index + 1
-        }`;
+  const storyDistribution = await Promise.all(
+    WorkgroupUserTask.map(
+      async ({
+        GroupDistribution: { amontOfTroops, code },
+        groupDistributionId,
+      }) => {
+        return await Promise.all(
+          Array.from({ length: session }).map(
+            async (
+              _,
+              index
+            ): Promise<Prisma.ContentDistributionUncheckedCreateInput> => {
+              const path = `${code}/${project.name}/${index + 1}`;
 
-        if (map.has(randomizedStory[storyIndex].id)) {
-          const value = map.get(randomizedStory[storyIndex].id);
-          map.set(
-            randomizedStory[storyIndex].id,
-            value! + task.GroupDistribution.amontOfTroops
-          );
-        } else {
-          map.set(
-            randomizedStory[storyIndex].id,
-            task.GroupDistribution.amontOfTroops
-          );
-        }
+              if (project.allocationType === "GENERIC") {
+                const amountOfContents = Math.floor(
+                  amontOfTroops / randomizedStory.length
+                );
+                const modulo = amontOfTroops % randomizedStory.length;
+                let offset = 0;
+                const payload = randomizedStory.map(({ id: storyId }) => {
+                  const data = {
+                    amountOfContents,
+                    offset,
+                    storyId,
+                  };
+                  offset += amountOfContents;
+                  return data;
+                });
+                if (modulo > 0) {
+                  Array.from({ length: modulo }).forEach(
+                    (_, idx) => (payload[idx].amountOfContents += 1)
+                  );
+                }
+                payload.forEach((item) => {
+                  if (map.has(item.storyId)) {
+                    const value = map.get(item.storyId);
+                    map.set(item.storyId, value! + item.amountOfContents);
+                  } else {
+                    map.set(item.storyId, item.amountOfContents);
+                  }
+                });
+                const texts = project.captions?.map(
+                  (item) => item + " " + project.hashtags
+                );
+                offset += amountOfContents;
+                const captions = Buffer.from(texts.join("\n"), "utf-8");
+                await minioS3.write(`${path}/captions.txt`, captions, {
+                  type: "text/plain",
+                  bucket: "generated-content",
+                });
+                return {
+                  session: index + 1,
+                  groupDistributionCode: groupDistributionId,
+                  workgroupId: workgroupId,
+                  path,
+                  DistributionStory: {
+                    createMany: { data: payload },
+                  },
+                };
+              }
 
-        const data = {
-          session: index + 1,
-          groupDistributionCode: task.groupDistributionId,
-          storyId: randomizedStory[storyIndex].id,
-          workgroupId: workgroupId,
-          path,
-        };
-        storyIndex = (storyIndex + 1) % randomizedStory.length;
-        return data;
+              if (map.has(randomizedStory[storyIndex].id)) {
+                const value = map.get(randomizedStory[storyIndex].id);
+                map.set(randomizedStory[storyIndex].id, value! + amontOfTroops);
+              } else {
+                map.set(randomizedStory[storyIndex].id, amontOfTroops);
+              }
+
+              const data = {
+                session: index + 1,
+                groupDistributionCode: groupDistributionId,
+                storyId: randomizedStory[storyIndex].id,
+                workgroupId: workgroupId,
+                path,
+              };
+              storyIndex = (storyIndex + 1) % randomizedStory.length;
+              return data;
+            }
+          )
+        );
       }
-    );
-  });
+    )
+  );
 
   const payload = storyDistribution.flat();
 
@@ -99,66 +153,64 @@ const generateContentDistribution = async (projectId: string) => {
     })
   );
 
-  const deletePrevContentDistTransaction =
-    prisma.contentDistribution.deleteMany({ where: { Story: { projectId } } });
-
-  const contentDistributionTransaction =
-    prisma.contentDistribution.createManyAndReturn({
-      data: payload,
-      skipDuplicates: true,
-    });
+  const contentDistributionTransaction = payload.map((item) =>
+    prisma.contentDistribution.create({ data: item })
+  );
 
   const updateProjectStatus = prisma.project.update({
     where: { id: projectId },
     data: { status: true },
   });
 
-  const res = await prisma.$transaction([
-    deletePrevContentDistTransaction,
-    contentDistributionTransaction,
+  await prisma.$transaction([
+    ...contentDistributionTransaction,
     updateProjectStatus,
   ]);
-
-  return res[1];
 };
 
 const postGeneratedContent = async (storyId: string, files: string[]) => {
   const story = await Story.findById(storyId).lean();
+  const project = await prisma.project.findFirstOrThrow({
+    where: { Story: { some: { id: storyId } } },
+  });
   if (!story) throw new HTTPException(404, { message: "Story not found" });
   if (
-    story.contentPerStory !== files.length ||
-    story.captions?.length! < story.contentPerStory
+    (story.contentPerStory !== files.length ||
+      story.captions?.length! < story.contentPerStory) &&
+    project.allocationType === "SPECIFIC"
   )
     throw new HTTPException(400, { message: "Not enough files or captions" });
   let offset = 0;
   await Bun.$`${config.MINIO_CLIENT_COMMAND} alias set myminio http://${config.MINIO_HOST}:${config.MINIO_PORT} ${config.MINIO_ACCESS_KEY} ${config.MINIO_SECRET_KEY}`;
   const ContentDistribution = await prisma.contentDistribution.findMany({
-    where: { storyId },
-    include: { GroupDistribution: true },
+    where: { OR: [{ DistributionStory: { some: { storyId } } }, { storyId }] },
+    include: { GroupDistribution: true, DistributionStory: true },
   });
   await Promise.all(
     ContentDistribution.map(async (content) => {
-      const filesPayload = files.slice(
-        offset,
-        content.GroupDistribution.amontOfTroops + offset
-      );
+      const amountOfContents =
+        content.DistributionStory.find((item) => item.storyId === storyId)
+          ?.amountOfContents ?? content.GroupDistribution.amontOfTroops;
+
+      const path =
+        project.allocationType === "GENERIC"
+          ? `${content.path}/UG`
+          : content.path;
+      const filesPayload = files.slice(offset, amountOfContents + offset);
       const texts = story
-        .captions!.slice(
-          offset,
-          content.GroupDistribution.amontOfTroops + offset
-        )
+        .captions!.slice(offset, amountOfContents + offset)
         .map((item) => item + " " + story.hashtags);
-      offset += content.GroupDistribution.amontOfTroops;
+      offset += amountOfContents;
       const captions = Buffer.from(texts.join("\n"), "utf-8");
-      await minioS3.write(`${content.path}/captions.txt`, captions, {
+      await minioS3.write(`${path}/captions.txt`, captions, {
         type: "text/plain",
         bucket: "generated-content",
       });
-      await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${content.path}`;
+      await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${path}`;
       await Promise.all(
         filesPayload.map(
           async (file) =>
-            await Bun.$`${config.MINIO_CLIENT_COMMAND} mv "myminio/tmp/${file}" "myminio/generated-content/${content.path}/${file}"`
+            await Bun.$`${config.MINIO_CLIENT_COMMAND} mv "myminio/tmp/${file}" "myminio/generated-content/${path}/${file}"`
         )
       );
     })

@@ -1,8 +1,11 @@
-import { GeneratorStatus, StoryType } from "@prisma/client";
+import { AllocationType, GeneratorStatus, StoryType } from "@prisma/client";
 import { z } from "zod";
 
 const createProjectBody = z.object({
   name: z.string().trim().min(1, "Required"),
+  captions: z.string().optional(),
+  hashtags: z.string().optional(),
+  allocationType: z.nativeEnum(AllocationType),
   workgroupId: z.string().trim().min(1, "Required"),
 });
 

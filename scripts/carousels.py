@@ -295,14 +295,15 @@ class Generator():
             
             temp_path = "/".join([self.base_path, "tmp", self.target[i]["path"]])
             target_path = "/".join([self.base_path, self.target[i]["path"]])
-            num_contents = self.target[i]["amountOfTroops"]
+            num_contents = self.target[i]["amountOfContents"]
+            offset = self.target[i].get("offset", 0)
             carousels = create_carousels(self.sections, self.font_path, num_contents)
 
             print(self.target[i], num_contents)
             
             for j in range(len(carousels)):
                 for k in range(len(carousels[j])):
-                    carousel_path = target_path + "/carousels/sort_{}_{}.jpg".format(k + 1, j + 1)
+                    carousel_path = target_path + "/carousels/sort_{}_{}.jpg".format(k + 1, offset + j + 1)
                     carousels[j][k].save(carousel_path)
                     self.distributed.append(carousel_path)
 
@@ -312,21 +313,22 @@ class Generator():
                 video_temp_paths = []
 
                 for j in range(len(carousels)):
-                    video_temp_path = temp_path + "/{}.mp4".format(j + 1)
+                    video_temp_path = temp_path + "/{}.mp4".format(offset + j + 1)
                     create_video(carousels[j], video_temp_path)
                     video_temp_paths.append(video_temp_path)
                 carousels = []
 
                 for j in range(len(video_temp_paths)):
-                    video_path = target_path + "/videos/{}.mp4".format(j + 1)
+                    video_path = target_path + "/videos/{}.mp4".format(offset + j + 1)
                     create_video_with_sound(self.sounds_path, video_temp_paths[j], video_path)
                     self.distributed.append(video_path)
 
-            captions = list(map(lambda c: " ".join([c, self.hashtags]), self.captions[l:l + num_contents]))
-            with open(target_path + "/captions.txt", "w", encoding = "utf8") as fp:
-                fp.write('\n'.join(captions))
-            self.distributed.append(target_path + "/captions.txt")
-            l += num_contents
+            if len(self.captions):
+                captions = list(map(lambda c: " ".join([c, self.hashtags]), self.captions[l:l + num_contents]))
+                with open(target_path + "/captions.txt", "w", encoding = "utf8") as fp:
+                    fp.write('\n'.join(captions))
+                self.distributed.append(target_path + "/captions.txt")
+                l += num_contents
 
     def json_reports(self):
 
