@@ -86,17 +86,18 @@ model WorkgroupUserTask {
 }
 
 model Project {
-  id              String         @id @default(uuid())
-  name            String
-  status          Boolean        @default(false)
-  workgroupId     String
-  Workgroup       Workgroup      @relation(fields: [workgroupId], references: [id])
-  workgroupUserId Int
-  WorkgroupUser   WorkgroupUser  @relation(fields: [workgroupUserId], references: [id])
-  Story           Story[]
-  allocationType  AllocationType
-  captions        String[]
-  hashtags        String?
+  id                  String                @id @default(uuid())
+  name                String
+  status              Boolean               @default(false)
+  workgroupId         String
+  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
+  workgroupUserId     Int
+  WorkgroupUser       WorkgroupUser         @relation(fields: [workgroupUserId], references: [id])
+  Story               Story[]
+  allocationType      AllocationType
+  captions            String[]
+  hashtags            String?
+  ContentDistribution ContentDistribution[]
 
   @@unique([name, workgroupUserId])
 }
@@ -128,11 +129,13 @@ model ContentDistribution {
   Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
   groupDistributionCode String
   GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
+  projectId             String
+  Project               Project             @relation(fields: [projectId], references: [id])
   storyId               String?
   Story                 Story?              @relation(fields: [storyId], references: [id], onDelete: Cascade)
   DistributionStory     DistributionStory[]
 
-  @@unique([workgroupId, groupDistributionCode, session, storyId], name: "uniqueConstraint")
+  @@unique([workgroupId, groupDistributionCode, session, projectId, storyId], name: "uniqueConstraint")
 }
 
 enum Role {

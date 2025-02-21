@@ -107,6 +107,7 @@ const generateContentDistribution = async (projectId: string) => {
                   bucket: "generated-content",
                 });
                 return {
+                  projectId,
                   session: index + 1,
                   groupDistributionCode: groupDistributionId,
                   workgroupId: workgroupId,
@@ -130,6 +131,7 @@ const generateContentDistribution = async (projectId: string) => {
                 storyId: randomizedStory[storyIndex].id,
                 workgroupId: workgroupId,
                 path,
+                projectId,
               };
               storyIndex = (storyIndex + 1) % randomizedStory.length;
               return data;
@@ -202,11 +204,11 @@ const postGeneratedContent = async (storyId: string, files: string[]) => {
         .map((item) => item + " " + story.hashtags);
       offset += amountOfContents;
       const captions = Buffer.from(texts.join("\n"), "utf-8");
+      await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${path}`;
       await minioS3.write(`${path}/captions.txt`, captions, {
         type: "text/plain",
         bucket: "generated-content",
       });
-      await Bun.$`${config.MINIO_CLIENT_COMMAND} rm --recursive --force myminio/generated-content/${path}`;
       await Promise.all(
         filesPayload.map(
           async (file) =>

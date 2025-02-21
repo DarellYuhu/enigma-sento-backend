@@ -57,22 +57,15 @@ const getGroupDistributions = async (workgroupId: string) => {
     where: { workgroupId },
     include: {
       ContentDistribution: {
-        select: { Story: { select: { Project: true } } },
+        select: { Project: true },
       },
     },
   });
   const normalized = groupDistributions.map(
     ({ ContentDistribution, ...rest }) => {
-      const projects = new Map<string, Project>();
-      for (const item of ContentDistribution) {
-        if (!projects.has(item.Story.Project.id)) {
-          projects.set(item.Story.Project.id, item.Story.Project);
-        }
-      }
-
       return {
         ...rest,
-        projects: Array.from(projects.values()),
+        projects: ContentDistribution.map((item) => item.Project),
       };
     }
   );
